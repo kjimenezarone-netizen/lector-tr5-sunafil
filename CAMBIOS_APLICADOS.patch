@@ -1,0 +1,1517 @@
+--- a/index.html
++++ b/index.html
+@@ -11,7 +11,7 @@
+     <script>if (typeof XLSX === 'undefined') { document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"><\/script>'); }</script>
+     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+-    <link rel="stylesheet" href="style.css">
++    <link rel="stylesheet" href="style.css?v=3.1">
+ </head>
+ 
+ <body class="bg-slate-50 min-h-screen flex flex-col">
+@@ -125,7 +125,7 @@
+                 <span class="step-number">1</span>
+                 <div>
+                     <h2 class="step-title">Cargar archivos TXT o ZIP</h2>
+-                    <p class="step-subtitle">Seleccione los archivos TXT o ZIP de resultados de consultas RUC. Cada carga reemplaza los resultados anteriores. Límite: 20 MB por archivo.</p>
++                    <p class="step-subtitle">Seleccione los archivos TXT o ZIP de resultados de consultas RUC. El aplicativo no consulta SUNAT directamente. Cada carga reemplaza los resultados anteriores. Límite: 20 MB por archivo.</p>
+                 </div>
+             </div>
+             <div class="card-main p-6 bg-white">
+@@ -210,8 +210,11 @@
+                     </button>
+                     <span id="ruc-selection-count" role="status" class="text-xs text-gray-500 ml-1"></span>
+                 </div>
+-                <p class="px-6 pt-2 text-xs text-gray-400">Seleccionar una empresa incluye todas sus apariciones, incluso fuera del filtro. La selección persiste al buscar y cambiar de página; una nueva carga la reinicia.</p>
+-                <p class="px-6 pb-2 text-xs text-gray-400">Empresas únicas muestra RUC de 11 dígitos. Los registros sin RUC válido permanecen en la vista original.</p>
++                <details class="px-6 py-2 border-b text-xs text-gray-500">
++                    <summary class="cursor-pointer font-semibold">Ayuda sobre vistas y selección</summary>
++                    <p class="mt-2">Seleccionar una empresa incluye todas sus apariciones, incluso fuera del filtro. La selección persiste entre búsquedas y páginas; una nueva carga la reinicia.</p>
++                    <p class="mt-1">Empresas únicas muestra RUC de 11 dígitos. Las filas con RUC inválido permanecen en Registros.</p>
++                </details>
+                 <details id="ruc-column-control" class="px-6 py-2 border-b border-t">
+                     <summary class="text-xs font-semibold text-gray-500 cursor-pointer py-1">Columnas visibles de registros RUC</summary>
+                     <p class="text-xs text-gray-400 mt-1">ZIP, TXT, fila, selección y acceso a ficha permanecen visibles.</p>
+@@ -259,16 +262,20 @@
+                             <option value="selected">Empresas seleccionadas</option>
+                             <option value="repeated">RUC repetidos</option>
+                             <option value="differences">RUC con diferencias</option>
+-                            <option value="zip">Por ZIP de origen</option>
++                            <option value="zip">Por archivo de origen (ZIP o TXT)</option>
+                         </select>
+                     </div>
+-                    <div class="min-w-[180px]">
+-                        <label for="ruc-export-zip" class="form-label">ZIP (para alcance Por ZIP)</label>
++                    <div id="ruc-export-zip-wrap" class="min-w-[180px] hidden">
++                        <label for="ruc-export-zip" class="form-label">Archivo de origen</label>
+                         <select id="ruc-export-zip" class="form-select"></select>
+                     </div>
+                     <button id="ruc-preview-button" disabled class="btn-primary py-2.5 px-5 text-white font-bold rounded-xl">Previsualizar exportación</button>
+                 </div>
+-                <p class="text-xs text-gray-500 mt-3">Solo «Resultado filtrado» aplica la búsqueda y el filtro de la tabla. Cada TXT se exporta en una hoja propia, junto con Resumen y Fuentes.</p>
++                <p class="text-xs text-gray-500 mt-3">Solo «Resultado filtrado» utiliza la búsqueda actual. Las descargas mantienen los archivos originales y su trazabilidad.</p>
++                <div class="tr-finish-bar">
++                    <p>¿Terminó de revisar las empresas? Borre los resultados solo cuando usted lo decida.</p>
++                    <button type="button" id="ruc-reset-all" disabled class="btn-secondary tr-reset-action">Finalizar consulta y limpiar todo</button>
++                </div>
+                 <div id="ruc-export-preview" class="hidden mt-5 pt-5 border-t" aria-live="polite">
+                     <p id="ruc-export-summary" class="font-bold text-sm mb-3 text-[#003366]"></p>
+                     <ul id="ruc-export-sheets" class="sheets-list mb-3"></ul>
+@@ -319,32 +326,101 @@
+                         </div>
+                     </label>
+                 </div>
+-                <div class="grid grid-cols-2 gap-3 mt-5">
+-                    <button id="btn_process_data" class="btn-primary py-3.5 text-white font-bold rounded-xl shadow flex items-center justify-center gap-2">
++                <div class="mt-5">
++                    <button id="btn_process_data" class="btn-primary w-full py-3.5 text-white font-bold rounded-xl shadow flex items-center justify-center gap-2">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+-                        Visualizar datos
+-                    </button>
+-                    <button id="btn_download_excel" class="btn-excel py-3.5 text-white font-bold rounded-xl shadow flex items-center justify-center gap-2">
+-                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+-                        Previsualizar Excel
++                        Procesar y visualizar datos
+                     </button>
+                 </div>
+                 <div class="flex items-center gap-3 mt-4">
+                     <div id="loader" class="loader"></div>
+                     <p id="tr-processing-status" role="status" class="status-text flex-1"></p>
+                     <button id="tr-cancel" disabled class="btn-ghost text-sm">Cancelar</button>
+-                </div>
+-            </div>
+-        </div>
+-
+-        <!-- PASOS 2, 3: Resultados (ocultos hasta cargar) -->
++                    <button type="button" id="tr-reset-all" disabled class="btn-ghost text-sm tr-reset-action">Limpiar todo</button>
++                </div>
++            </div>
++        </div>
++
++        <!-- PASOS 2, 3 y 4: Resultados (ocultos hasta cargar) -->
+         <section id="preview_section" class="hidden animate-fade-in mt-5 pb-12 space-y-5">
+ 
+-            <!-- PASO 2: Trabajadores -->
++            <!-- PASO 2: Registros originales -->
++            <section class="step-section">
++                <div class="step-header">
++                    <span class="step-number">2</span>
++                    <div>
++                        <h2 class="step-title">Registros originales del reporte</h2>
++                        <p class="step-subtitle">Consulte las filas exactas de cada archivo TR cargado. Esta tabla conserva todas las filas y columnas del TXT, sin combinar registros. Para exportar un subconjunto de trabajadores utilice los filtros del paso 3.</p>
++                    </div>
++                </div>
++                <div class="flex flex-wrap gap-4 items-end mb-3">
++                    <div class="min-w-[240px]">
++                        <label for="tr-source-select" class="form-label">Reporte</label>
++                        <select id="tr-source-select" class="form-select"></select>
++                    </div>
++                </div>
++                <div id="company_container" class="hidden card-main bg-blue-50/40 p-5 mb-3 border border-blue-100">
++                    <h4 class="text-[#003366] font-bold text-sm mb-3 uppercase">Resumen de la Entidad</h4>
++                    <div id="company_list" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-[12px] uppercase font-bold"></div>
++                </div>
++                <details id="tr-charts-details" class="mb-3 tr-optional-details">
++                    <summary class="step-export-summary text-sm">Ver gráficos de distribución (opcional)</summary>
++                <div id="file_metrics_container" class="hidden grid grid-cols-1 md:grid-cols-2 gap-5 mb-3">
++                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
++                        <h4 class="text-[#003366] text-xs font-bold uppercase mb-3 text-center">Distribución por Tipo de Doc.</h4>
++                        <div style="width:100%;max-width:300px;height:200px;"><canvas id="chart-file-tipo"></canvas></div>
++                    </div>
++                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
++                        <h4 class="text-[#003366] text-xs font-bold uppercase mb-3 text-center">Ocupaciones (Top 5)</h4>
++                        <div style="width:100%;max-width:300px;height:200px;"><canvas id="chart-file-ocup"></canvas></div>
++                    </div>
++                </div>
++                </details>
++                <div class="card-main overflow-hidden bg-white">
++                    <div class="px-4 py-3 border-b bg-gray-50 flex flex-wrap gap-3 items-end">
++                        <h3 class="font-bold text-[#003366] text-xs uppercase w-full">Registros detectados</h3>
++                        <div class="flex-1 min-w-[150px]">
++                            <label for="search_box" class="form-label">Buscar en registros</label>
++                            <input type="text" id="search_box" placeholder="Buscar…" class="form-input">
++                        </div>
++                        <details class="w-full tr-optional-details">
++                            <summary class="text-xs font-semibold text-[#003366] cursor-pointer py-2">Filtros adicionales de registros (columna, tipo y ocupación)</summary>
++                            <div class="flex flex-wrap gap-3 items-end mt-2">
++                        <div class="min-w-[140px]">
++                            <label for="filter_columna" class="form-label">Columna</label>
++                            <select id="filter_columna" class="form-select"><option value="">🔍 Todas las columnas</option></select>
++                        </div>
++                        <div class="min-w-[130px]">
++                            <label for="filter_tipo" class="form-label">Tipo documento</label>
++                            <select id="filter_tipo" class="form-select"><option value="">-- Todos los Tipos --</option></select>
++                        </div>
++                        <div class="min-w-[150px]">
++                            <label for="filter_ocupacion" class="form-label">Ocupación</label>
++                            <select id="filter_ocupacion" class="form-select"><option value="">-- Todas las Ocupaciones --</option></select>
++                        </div>
++                            </div>
++                        </details>
++                    </div>
++                    <div class="overflow-auto max-h-[500px]">
++                        <table class="w-full text-left text-[10px] tracking-tight uppercase" id="data_table">
++                            <thead class="bg-gray-100 sticky top-0"><tr id="table_head" class="text-[#003366]"></tr></thead>
++                            <tbody id="table_body" class="divide-y divide-gray-100 text-gray-600"></tbody>
++                        </table>
++                    </div>
++                    <div id="pagination_container" class="hidden flex justify-between items-center px-5 py-3 border-t bg-gray-50 text-xs font-semibold text-[#003366]">
++                        <span id="page_info">Mostrando 0 - 0 de 0 registros</span>
++                        <div class="flex gap-2">
++                            <button class="btn-page" id="btn_prev">← Anterior</button>
++                            <button class="btn-page" id="btn_next">Siguiente →</button>
++                        </div>
++                    </div>
++                </div>
++            </section>
++            <!-- PASO 3: Trabajadores -->
+             <section id="tr-people" class="hidden step-section">
+                 <div class="step-header flex flex-wrap items-center justify-between gap-4">
+                     <div class="flex items-center gap-3">
+-                        <span class="step-number">2</span>
++                        <span class="step-number">3</span>
+                         <div>
+                             <h2 class="step-title">Trabajadores y Cruce Inspectivo TR5 / TR6</h2>
+                             <p id="tr-person-summary" role="status" class="step-subtitle"></p>
+@@ -353,7 +429,7 @@
+                     <div>
+                         <button id="tr-direct-download-excel" class="btn-excel py-2.5 px-5 text-white font-bold rounded-xl flex items-center gap-2 shadow-sm hover:shadow transition-all">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+-                            <span>📥 Descargar Excel para Informe</span>
++                            <span>Ir al centro de exportación</span>
+                         </button>
+                     </div>
+                 </div>
+@@ -371,21 +447,21 @@
+                         <span class="qf-icon">🔁</span>
+                         <div class="qf-info">
+                             <span class="qf-count" id="qf-multiple">0</span>
+-                            <span class="qf-label">Con reingresos / múltiples</span>
++                            <span class="qf-label">Múltiples registros</span>
+                         </div>
+                     </button>
+                     <button type="button" data-filter="no_cuspp" class="quick-finding-card highlight-orange">
+                         <span class="qf-icon">⚠️</span>
+                         <div class="qf-info">
+                             <span class="qf-count" id="qf-no-cuspp">0</span>
+-                            <span class="qf-label">Sin código CUSPP</span>
++                            <span class="qf-label">CUSPP no registrado</span>
+                         </div>
+                     </button>
+                     <button type="button" data-filter="no_sctr" class="quick-finding-card highlight-red">
+                         <span class="qf-icon">🛡️</span>
+                         <div class="qf-info">
+                             <span class="qf-count" id="qf-no-sctr">0</span>
+-                            <span class="qf-label">Sin cobertura SCTR</span>
++                            <span class="qf-label">SCTR salud no detectado</span>
+                         </div>
+                     </button>
+                 </div>
+@@ -397,12 +473,9 @@
+                             <input id="tr-person-search" type="text" class="form-input" placeholder="DNI, apellido o nombre…">
+                         </div>
+                         <div class="min-w-[220px]">
+-                            <label for="tr-person-filter" class="form-label">Filtrar vista</label>
++                            <label for="tr-person-filter" class="form-label">Estado o condición</label>
+                             <select id="tr-person-filter" class="form-select">
+                                 <option value="all">👥 Todos los trabajadores</option>
+-                                <option value="multiple">🔁 Con reingresos / múltiples contratos</option>
+-                                <option value="no_cuspp">⚠️ Sin CUSPP registrado</option>
+-                                <option value="no_sctr">🛡️ Sin cobertura SCTR</option>
+                                 <option value="En ambos">✅ En ambos reportes (TR5 + TR6)</option>
+                                 <option value="Solo TR5">📄 Solo en TR5</option>
+                                 <option value="Solo TR6">📄 Solo en TR6</option>
+@@ -495,115 +568,59 @@
+                         </div>
+                     </details>
+                 </div>
+-                <!-- Exportación colapsada -->
+-                <details class="mt-3">
++            </section>
++
++            <!-- PASO 4: Centro de exportación -->
++            <section id="tr-export-center" class="step-section">
++                <div class="step-header">
++                    <span class="step-number">4</span>
++                    <div>
++                        <h2 class="step-title">Preparar y descargar Excel</h2>
++                        <p class="step-subtitle">Una exportación centralizada, con alcances completos, filtrados, seleccionados o individuales y revisión previa.</p>
++                    </div>
++                </div>
++                <details id="tr-export-details" class="tr-export-accordion" open>
+                     <summary class="step-export-summary">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+-                        Exportar trabajadores a Excel
++                        Opciones de exportación · expandir o contraer
+                     </summary>
+                     <div class="card-main bg-white p-6 mt-2" aria-labelledby="tr-export-title">
+-                        <h4 id="tr-export-title" class="sr-only">Centro de exportación TR5/TR6</h4>
++                        <h4 id="tr-export-title" class="font-bold text-[#003366] mb-2">Prepare el archivo Excel para su informe</h4>
++                        <p class="tr-export-description">Elija el alcance, compruebe el contenido y descargue el Excel. Se conservan columnas, filas originales, fechas, ceros iniciales y fuentes.</p>
++                        <p id="tr-export-dataset-info" class="tr-export-facts" role="status"></p>
+                         <div class="flex flex-wrap gap-4 items-end">
+                             <div class="flex-1 min-w-[220px]">
+-                                <label for="tr-export-scope" class="form-label">¿Qué desea exportar?</label>
++                                <label for="tr-export-scope" class="form-label">Contenido del archivo Excel</label>
+                                 <select id="tr-export-scope" class="form-select">
+-                                    <option value="all">📄 Todos los trabajadores</option>
+-                                    <option value="filtered" id="tr-scope-filtered" class="hidden">🔍 Solo resultado filtrado</option>
+-                                    <option value="selected" id="tr-scope-selected" class="hidden">☑️ Solo seleccionados</option>
+-                                    <option value="individual" id="tr-scope-individual" class="hidden">👤 Trabajador de la ficha abierta</option>
++                                    <option value="all">Archivo completo · todos los trabajadores y registros</option>
++                                    <option value="filtered" id="tr-scope-filtered" class="hidden">Resultados del filtro aplicado</option>
++                                    <option value="selected" id="tr-scope-selected" class="hidden">Trabajadores seleccionados</option>
++                                    <option value="individual" id="tr-scope-individual" class="hidden">Solo trabajador de la ficha abierta</option>
+                                 </select>
+                             </div>
+-                            <button id="tr-export-prepare" class="btn-primary py-2.5 px-5 text-white font-bold rounded-xl">Previsualizar Excel</button>
+-                        </div>
+-                        <p id="tr-export-hint" class="text-xs text-gray-500 mt-3">Se exportarán todos los trabajadores del reporte con sus filas completas de TR5 y TR6.</p>
++                            <button id="tr-export-prepare" class="btn-primary py-2.5 px-5 text-white font-bold rounded-xl">Revisar contenido del Excel</button>
++                        </div>
++                        <p id="tr-export-hint" class="text-xs text-gray-500 mt-3">Se exportará el archivo completo con todas las filas y columnas originales.</p>
+                         <div id="tr-export-preview" class="hidden mt-5 pt-5 border-t" aria-live="polite">
+                             <p id="tr-export-summary" class="font-bold text-sm mb-3 text-[#003366]"></p>
++                            <p class="font-semibold text-sm mb-2 text-[#003366]">Hojas que tendrá el archivo</p>
+                             <ul id="tr-export-sheets" class="sheets-list mb-3"></ul>
+                             <p class="text-xs text-gray-500 mb-2">Muestra de los primeros cinco trabajadores:</p>
+                             <div class="overflow-auto border rounded-lg"><table id="tr-export-sample" class="ruc-table text-xs w-full"></table></div>
+                             <button id="tr-export-download" disabled class="btn-excel mt-4 py-3 px-6 text-white font-bold rounded-xl flex items-center gap-2">
+                                 <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+-                                Descargar Excel previsualizado
++                                Descargar archivo Excel
+                             </button>
+                         </div>
+                     </div>
+                 </details>
++
++                <div class="tr-finish-bar">
++                    <p>¿Ya terminó la consulta? Limpiar todo borra los resultados de esta pantalla, no los TXT originales.</p>
++                    <button type="button" id="tr-reset-all-bottom" disabled class="btn-secondary tr-reset-action">Finalizar consulta y limpiar todo</button>
++                </div>
+             </section>
+ 
+-            <!-- PASO 3: Registros originales -->
+-            <section class="step-section">
+-                <div class="step-header">
+-                    <span class="step-number">3</span>
+-                    <div>
+-                        <h2 class="step-title">Registros originales del reporte</h2>
+-                        <p class="step-subtitle">Consulte las filas exactas de cada archivo TR cargado. La exportación filtrada usa la búsqueda y filtros de la vista de trabajadores superior.</p>
+-                    </div>
+-                </div>
+-                <div class="flex flex-wrap gap-4 items-end mb-3">
+-                    <div class="min-w-[240px]">
+-                        <label for="tr-source-select" class="form-label">Reporte</label>
+-                        <select id="tr-source-select" class="form-select"></select>
+-                    </div>
+-                </div>
+-                <details class="mb-3">
+-                    <summary class="step-export-summary text-sm">
+-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
+-                        Columnas visibles del reporte TR
+-                    </summary>
+-                    <div class="card-main bg-white p-4 mt-2">
+-                        <p class="text-xs text-gray-500 mb-2">La configuración se conserva por archivo al cambiar de reporte y se reinicia con una nueva carga.</p>
+-                        <div id="tr-column-options" class="column-options"></div>
+-                    </div>
+-                </details>
+-                <div id="company_container" class="hidden card-main bg-blue-50/40 p-5 mb-3 border border-blue-100">
+-                    <h4 class="text-[#003366] font-bold text-sm mb-3 uppercase">Resumen de la Entidad</h4>
+-                    <div id="company_list" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-[12px] uppercase font-bold"></div>
+-                </div>
+-                <div id="file_metrics_container" class="hidden grid grid-cols-1 md:grid-cols-2 gap-5 mb-3">
+-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
+-                        <h4 class="text-[#003366] text-xs font-bold uppercase mb-3 text-center">Distribución por Tipo de Doc.</h4>
+-                        <div style="width:100%;max-width:300px;height:200px;"><canvas id="chart-file-tipo"></canvas></div>
+-                    </div>
+-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
+-                        <h4 class="text-[#003366] text-xs font-bold uppercase mb-3 text-center">Ocupaciones (Top 5)</h4>
+-                        <div style="width:100%;max-width:300px;height:200px;"><canvas id="chart-file-ocup"></canvas></div>
+-                    </div>
+-                </div>
+-                <div class="card-main overflow-hidden bg-white">
+-                    <div class="px-4 py-3 border-b bg-gray-50 flex flex-wrap gap-3 items-end">
+-                        <h3 class="font-bold text-[#003366] text-xs uppercase w-full">Registros detectados</h3>
+-                        <div class="min-w-[140px]">
+-                            <label for="filter_columna" class="form-label">Columna</label>
+-                            <select id="filter_columna" class="form-select"><option value="">🔍 Todas las columnas</option></select>
+-                        </div>
+-                        <div class="min-w-[130px]">
+-                            <label for="filter_tipo" class="form-label">Tipo documento</label>
+-                            <select id="filter_tipo" class="form-select"><option value="">-- Todos los Tipos --</option></select>
+-                        </div>
+-                        <div class="min-w-[150px]">
+-                            <label for="filter_ocupacion" class="form-label">Ocupación</label>
+-                            <select id="filter_ocupacion" class="form-select"><option value="">-- Todas las Ocupaciones --</option></select>
+-                        </div>
+-                        <div class="flex-1 min-w-[150px]">
+-                            <label for="search_box" class="form-label">Buscar en registros</label>
+-                            <input type="text" id="search_box" placeholder="Buscar…" class="form-input">
+-                        </div>
+-                    </div>
+-                    <div class="overflow-auto max-h-[500px]">
+-                        <table class="w-full text-left text-[10px] tracking-tight uppercase" id="data_table">
+-                            <thead class="bg-gray-100 sticky top-0"><tr id="table_head" class="text-[#003366]"></tr></thead>
+-                            <tbody id="table_body" class="divide-y divide-gray-100 text-gray-600"></tbody>
+-                        </table>
+-                    </div>
+-                    <div id="pagination_container" class="hidden flex justify-between items-center px-5 py-3 border-t bg-gray-50 text-xs font-semibold text-[#003366]">
+-                        <span id="page_info">Mostrando 0 - 0 de 0 registros</span>
+-                        <div class="flex gap-2">
+-                            <button class="btn-page" id="btn_prev">← Anterior</button>
+-                            <button class="btn-page" id="btn_next">Siguiente →</button>
+-                        </div>
+-                    </div>
+-                </div>
+-            </section>
+         </section>
+     </main>
+ 
+@@ -709,15 +726,15 @@
+ 
+     <script src="file-parser.js?v=2.6"></script>
+     <script src="sheets-api.js?v=2.6"></script>
+-    <script src="processing-client.js?v=2.6"></script>
++    <script src="processing-client.js?v=3.1"></script>
+     <script src="diagnostics.js?v=2.6"></script>
+     <script src="column-chooser.js?v=2.6"></script>
+-    <script src="tr-analysis.js?v=2.6"></script>
+-    <script src="tr-filters.js?v=2.6"></script>
+-    <script src="tr-export.js?v=2.6"></script>
++    <script src="tr-analysis.js?v=3.1"></script>
++    <script src="tr-filters.js?v=3.1"></script>
++    <script src="tr-export.js?v=3.1"></script>
+     <script src="vendor/jszip.min.js"></script>
+-    <script src="script.js?v=2.6"></script>
+-    <script src="ruc.js?v=2.6"></script>
++    <script src="script.js?v=3.1"></script>
++    <script src="ruc.js?v=3.1"></script>
+     <!-- Sincroniza botones de vista Registros/Empresas con el select oculto que escucha ruc.js -->
+     <script>
+         document.addEventListener('DOMContentLoaded', function () {
+--- a/processing-client.js
++++ b/processing-client.js
+@@ -72,8 +72,10 @@
+         return new Promise((resolve, reject) => {
+             let worker;
+             let cancelled = false;
++            let job = null;
+             const finish = (error, result) => {
+-                if (worker && this.jobs.get(kind)?.worker !== worker) return;
++                // Impedir que un fallback antiguo destruya una nueva carga del mismo tipo.
++                if (this.jobs.get(kind) !== job) return;
+                 this.jobs.delete(kind);
+                 if (worker) worker.terminate();
+                 error ? reject(error) : resolve(result);
+@@ -85,8 +87,9 @@
+             };
+ 
+             try {
+-                worker = new Worker('processing-worker.js?v=2.6');
+-                this.jobs.set(kind, { worker, cancel });
++                worker = new Worker('processing-worker.js?v=3.1');
++                job = { worker, cancel };
++                this.jobs.set(kind, job);
+                 worker.onmessage = ({ data }) => {
+                     if (data.event === 'progress') onProgress(data.message);
+                     else if (data.event === 'done') finish(null, data.result);
+@@ -102,7 +105,8 @@
+                 try { worker.postMessage({ kind, files }); } catch(error) { finish(error); }
+             } catch {
+                 // If Worker construction throws (e.g. file:/// sandbox)
+-                this.jobs.set(kind, { worker: null, cancel });
++                job = { worker: null, cancel };
++                this.jobs.set(kind, job);
+                 this.runFallback(kind, files, onProgress, () => cancelled)
+                     .then(res => finish(null, res))
+                     .catch(err => finish(err));
+--- a/processing-worker.js
++++ b/processing-worker.js
+@@ -1,4 +1,4 @@
+-importScripts('file-parser.js?v=2.6', 'tr-analysis.js?v=2.6', 'vendor/jszip.min.js', 'ruc.js?v=2.6');
++importScripts('file-parser.js?v=2.6', 'tr-analysis.js?v=3.1', 'vendor/jszip.min.js', 'ruc.js?v=3.1');
+ const progress = message => postMessage({event:'progress',message});
+ async function dataset(file, name) {
+     progress(`Leyendo y detectando: ${name}`);
+--- a/ruc.js
++++ b/ruc.js
+@@ -197,6 +197,7 @@
+         el('ruc-next').disabled = (page + 1) * 50 >= visible.length;
+         el('ruc-selection-count').textContent = `${[...selected].filter(k => k.startsWith('ruc:')).length} empresas seleccionadas · ${[...selected].filter(k => k.startsWith('row:')).length} registros sin RUC seleccionados · ${RucModel.exportRecords(model, 'selected', selected, filtered).length} registros incluidos`;
+         el('ruc-preview-button').disabled = busy || !model.records.length;
++        el('ruc-reset-all').disabled = busy || (!model.records.length && !model.sources.length);
+     }
+     el('ruc-load').addEventListener('click', async () => {
+         if (!UI.requireIntendencia() || busy) return;
+@@ -218,17 +219,53 @@
+             model = result.model;
+             if (model.sources.length) SheetsAPI.event('VISUALIZACIÓN',{intendencia:processingOffice,modulo:'RUC',registros:model.records.length,archivos:files.length,bytes:files.reduce((n,f)=>n+f.size,0),duracionMs:performance.now()-processingStarted});
+             sources.push(...model.sources); issues.push(...result.issues); rejectedSources = result.rejectedSources;
++            if (model.sources.length) { el('ruc-search').value = ''; el('ruc-filter').value = 'all'; }
+             const zipNames = new Map(sources.map(s => [s.zipId, s.zipName]));
+             zipNames.forEach((name, id) => {
+                 const option = cell('option', `${id + 1}. ${name}`); option.value = String(id); el('ruc-export-zip').appendChild(option);
+             });
++            syncZipScope();
+             render();
+             el('ruc-issues').replaceChildren(...issues.map(issue => cell('li', issue)));
+-            status(`Carga finalizada: ${sources.length} TXT procesados y ${issues.length} observaciones. Los datos se mantienen en este navegador.`);
++            if (model.sources.length > 0) {
++                el('ruc-files').value = ''; // No elimina el modelo ni los resultados.
++                status(`Carga finalizada: ${sources.length} TXT procesados y ${issues.length} observaciones. Puede elegir nuevos archivos; los resultados se mantienen.`);
++            } else {
++                status(`No se procesó ningún TXT. Revise las ${issues.length} observaciones y corrija los archivos antes de reintentar.`);
++            }
+         } catch (error) { status(error.name === 'AbortError' ? error.message : `No se pudo completar la carga: ${error.message}`); }
+         finally { busy = false; el('ruc-load').disabled = !AppState.intendencia; el('ruc-cancel').disabled = true; el('ruc-files').disabled = false; render(); }
+     });
+-    el('ruc-cancel').addEventListener('click', () => { cancelled = true; status('Cancelando carga…'); });
++    el('ruc-reset-all').addEventListener('click', () => {
++        if (busy || (!model.records.length && !model.sources.length)) return;
++        if (!window.confirm('¿Finalizar esta consulta RUC? Se borrarán registros, filtros, fichas, selección y previsualizaciones de esta pantalla. Sus archivos originales y Excel descargados no se modifican.')) return;
++        model = RucModel.consolidate([]);
++        selected.clear(); filtered = []; preview = null; currentRuc = null;
++        cancelled = false; rejectedSources = 0; page = 0;
++        el('ruc-files').value = '';
++        el('ruc-search').value = '';
++        el('ruc-filter').value = 'all';
++        el('ruc-view').value = 'records';
++        el('ruc-view-records').classList.add('active');
++        el('ruc-view-companies').classList.remove('active');
++        el('ruc-export-scope').value = 'consolidated';
++        el('ruc-export-zip').replaceChildren();
++        el('ruc-detail').classList.add('hidden');
++        el('ruc-detail-content').replaceChildren();
++        el('ruc-diagnostic-preview').replaceChildren();
++        el('ruc-issues').replaceChildren();
++        ['ruc-export-sheets', 'ruc-export-sample', 'ruc-export-summary',
++         'ruc-head', 'ruc-body'].forEach(id => el(id).replaceChildren());
++        ColumnChooser.reset('ruc-records');
++        invalidatePreview(); syncZipScope(); render();
++        status('Consulta RUC finalizada. Puede cargar nuevos archivos.');
++    });
++    el('ruc-cancel').addEventListener('click', () => {
++        if (!busy) return;
++        cancelled = true;
++        Processing.cancel('RUC');
++        status('Carga cancelada. No se publicaron resultados parciales.');
++    });
+     el('ruc-diagnostic-prepare').addEventListener('click', () => {
+         if (!UI.requireIntendencia() || busy) return;
+         if (cancelled || (!model.sources.length && !rejectedSources)) return status('Complete una carga para preparar su diagnóstico.');
+@@ -242,7 +279,13 @@
+     el('ruc-filter').addEventListener('change', () => { invalidatePreview(); page = 0; render(); });
+     el('ruc-select-filtered').addEventListener('click', () => { filtered.forEach(r => selected.add(RucModel.selectionKey(r))); invalidatePreview(); render(); });
+     el('ruc-clear-selection').addEventListener('click', () => { selected.clear(); invalidatePreview(); render(); });
+-    ['ruc-export-scope', 'ruc-export-zip', 'intendencia'].forEach(id => el(id).addEventListener('change', invalidatePreview));
++    function syncZipScope() {
++        const byZip = el('ruc-export-scope').value === 'zip';
++        el('ruc-export-zip-wrap').classList.toggle('hidden', !byZip);
++        el('ruc-export-zip').disabled = !byZip || el('ruc-export-zip').options.length === 0;
++    }
++    el('ruc-export-scope').addEventListener('change', () => { invalidatePreview(); syncZipScope(); });
++    ['ruc-export-zip', 'intendencia'].forEach(id => el(id).addEventListener('change', invalidatePreview));
+     el('ruc-preview-button').addEventListener('click', () => {
+         if (!UI.requireIntendencia() || busy) return;
+         invalidatePreview();
+@@ -276,5 +319,6 @@
+     });
+     el('ruc-prev').addEventListener('click', () => { page--; render(); });
+     el('ruc-next').addEventListener('click', () => { page++; render(); });
++    syncZipScope();
+     render();
+ });
+--- a/script.js
++++ b/script.js
+@@ -49,28 +49,6 @@
+             .replace(/"/g, "&quot;")
+             .replace(/'/g, "&#39;");
+     },
+-    readAsIso(f) {
+-        return new Promise(res => {
+-            let r = new FileReader();
+-            r.onload = () => res(r.result);
+-            r.readAsText(f, "ISO-8859-1");
+-        });
+-    },
+-    // Retry con backoff exponencial para llamadas al backend
+-    async fetchWithRetry(url, options = {}, maxRetries = 3) {
+-        let delay = 1000;
+-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+-            try {
+-                const res = await fetch(url, options);
+-                if (res.ok) return res;
+-                throw new Error(`HTTP ${res.status}`);
+-            } catch (err) {
+-                if (attempt === maxRetries) throw err;
+-                await new Promise(r => setTimeout(r, delay));
+-                delay *= 2;
+-            }
+-        }
+-    },
+     showToast(message, type = 'error') {
+         const container = document.getElementById('toast-container');
+         if (!container) return;
+@@ -129,7 +107,7 @@
+     toggleProcessor() {
+         const int = document.getElementById('intendencia').value;
+         AppState.intendencia = int;
+-        ['nav_procesador', 'nav_ruc', 'open-tr', 'open-ruc', 'file_input', 'btn_process_data', 'btn_download_excel'].forEach(id => {
++        ['nav_procesador', 'nav_ruc', 'open-tr', 'open-ruc', 'file_input', 'btn_process_data'].forEach(id => {
+             document.getElementById(id).disabled = !int;
+         });
+         document.getElementById('intendencia-help').textContent = int
+@@ -172,7 +150,7 @@
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 ${iconColor} flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                         <div class="flex flex-col text-left">
+                             <span class="text-xs font-black uppercase tracking-wider">${typeLabel}</span>
+-                            <span class="text-xs font-semibold text-gray-800 break-all">${shortName}</span>
++                            <span class="text-xs font-semibold text-gray-800 break-all">${Utils.escapeHTML(shortName)}</span>
+                             <span class="text-[10px] text-gray-500">${sizekb} KB</span>
+                         </div>
+                     </div>`;
+@@ -188,32 +166,60 @@
+             }
+         }
+     },
++    resetFileSelection() {
++        // Libera la selección del input sin alterar tablas, datasets ni exportaciones.
++        const input = document.getElementById('file_input');
++        if (input) input.value = '';
++        document.getElementById('file-cards')?.replaceChildren();
++        const status = document.getElementById('file_status');
++        if (status) status.textContent = '';
++        document.getElementById('label-content-default')?.classList.remove('hidden');
++        const info = document.getElementById('file-info-container');
++        info?.classList.add('hidden');
++        info?.classList.remove('flex');
++    },
+     clearFile(event) {
+         if (event) {
+             event.preventDefault();
+             event.stopPropagation();
+         }
+-        const fileInput = document.getElementById('file_input');
+-        const labelDefault = document.getElementById('label-content-default');
+-        const infoContainer = document.getElementById('file-info-container');
+-        const fileCards = document.getElementById('file-cards');
+-        const status = document.getElementById('file_status');
+-
+-        fileInput.value = "";
+-        if (fileCards) fileCards.innerHTML = '';
+-        if (status) status.textContent = '';
+-        labelDefault.classList.remove('hidden');
+-        infoContainer.classList.add('hidden');
+-        infoContainer.classList.remove('flex');
+-
+-        document.getElementById('preview_section').classList.add('hidden');
++        UI.resetFileSelection();
++    },
++    resetWorkspaceTR() {
++        if (AppState.trBusy) return;
++        if (!window.confirm('¿Finalizar esta consulta? Se borrarán los resultados, filtros, fichas y vistas del lector TR. Sus archivos TXT y los Excel descargados no se modifican.')) return;
++        UI.resetFileSelection();
++        clearTimeout(AppState.searchDebounceTimeout);
++        AppState.searchDebounceTimeout = null;
+         AppState.globalRows = [];
+-        AppState.sourceDataset = null;
+-        AppState.trDatasets.forEach(dataset => ColumnChooser.reset(dataset));
+-        AppState.trDatasets = [];
+-        TRView.reset();
++        AppState.globalCols = [];
+         AppState.currentFilteredRows = [];
+         AppState.currentPage = 1;
++        AppState.trDatasets = [];
++        AppState.sourceDataset = null;
++        TRView.reset();
++        TRExport.invalidate();
++        document.getElementById('preview_section').classList.add('hidden');
++        document.getElementById('company_list').replaceChildren();
++        document.getElementById('company_container').classList.add('hidden');
++        document.getElementById('file_metrics_container').classList.add('hidden');
++        document.getElementById('tr-source-select').replaceChildren();
++        // Eliminar también los nodos de tablas y previsualizaciones ocultas.
++        ['tr-person-body', 'tr-person-detail', 'tr-export-sheets', 'tr-export-sample',
++         'tr-export-summary', 'tr-export-dataset-info', 'table_body', 'table_head',
++         'tr-person-summary', 'tr-selection-count'].forEach(id => {
++            document.getElementById(id)?.replaceChildren();
++        });
++        document.getElementById('search_box').value = '';
++        ['filter_tipo', 'filter_ocupacion', 'filter_columna'].forEach(id => {
++            const select = document.getElementById(id);
++            if (select) select.replaceChildren(new Option('Sin filtro', ''));
++        });
++        if (window.chartFileTipo) { window.chartFileTipo.destroy(); window.chartFileTipo = null; }
++        if (window.chartFileOcup) { window.chartFileOcup.destroy(); window.chartFileOcup = null; }
++        document.getElementById('tr-processing-status').textContent = 'Consulta finalizada. Puede cargar un nuevo reporte.';
++        document.getElementById('tr-reset-all').disabled = true;
++        document.getElementById('tr-reset-all-bottom').disabled = true;
+     },
+     renderInfoBox(data) {
+         const container = document.getElementById('company_list');
+@@ -275,8 +281,8 @@
+         this.renderCurrentPage();
+     },
+     renderCurrentPage() {
+-        const cols = ColumnChooser.visible(AppState.sourceDataset, AppState.globalCols);
+-        ColumnChooser.mount('tr-column-options', AppState.sourceDataset, AppState.globalCols, () => UI.renderCurrentPage());
++        // Se muestran todas las columnas del TXT; se retiró el control de visibilidad redundante.
++        const cols = AppState.globalCols;
+         document.getElementById('table_head').innerHTML = cols.map(c => `<th class="px-4 py-3 border-b whitespace-nowrap">${Utils.escapeHTML(c)}</th>`).join('');
+         const startIndex = (AppState.currentPage - 1) * AppState.pageSize;
+         const endIndex = Math.min(startIndex + AppState.pageSize, AppState.currentFilteredRows.length);
+@@ -326,7 +332,7 @@
+         // --- 2. Dibujar Gráficos Minilíticos ---
+         const ctxTipo = document.getElementById('chart-file-tipo');
+         if (window.chartFileTipo) window.chartFileTipo.destroy();
+-        if (ctxTipo) {
++        if (ctxTipo && typeof Chart !== 'undefined') {
+             const labelsT = Object.keys(conteoTipos);
+             const dataT = Object.values(conteoTipos);
+             const coloresT = labelsT.map((_, i) => `hsla(${(i * 360) / (labelsT.length || 1)}, 70%, 55%, 0.8)`);
+@@ -340,7 +346,7 @@
+ 
+         const ctxOcup = document.getElementById('chart-file-ocup');
+         if (window.chartFileOcup) window.chartFileOcup.destroy();
+-        if (ctxOcup) {
++        if (ctxOcup && typeof Chart !== 'undefined') {
+             const topOcups = Object.entries(conteoOcup).sort((a, b) => b[1] - a[1]).slice(0, 5);
+             const labelsO = topOcups.map(e => e[0]);
+             const dataO = topOcups.map(e => e[1]);
+@@ -374,15 +380,19 @@
+         const processingStarted = performance.now();
+         const processingOffice = AppState.intendencia;
+         AppState.trBusy = true;
++        document.getElementById('tr-reset-all').disabled = true;
++        document.getElementById('tr-reset-all-bottom').disabled = true;
+         document.getElementById('tr-cancel').disabled = false;
+         document.getElementById('btn_clear_file').disabled = true;
+ 
+         try {
++            clearTimeout(AppState.searchDebounceTimeout);
++            AppState.searchDebounceTimeout = null;
++            document.getElementById('search_box').value = '';
+             AppState.globalRows = [];
+             AppState.globalCols = [];
+             AppState.currentFilteredRows = [];
+             AppState.sourceDataset = null;
+-            AppState.trDatasets.forEach(dataset => ColumnChooser.reset(dataset));
+             AppState.trDatasets = [];
+             if (typeof TRView !== 'undefined' && TRView.reset) TRView.reset();
+             document.getElementById('preview_section').classList.add('hidden');
+@@ -428,7 +438,7 @@
+                         <div class="flex flex-col text-left">
+                             <div class="flex items-center gap-2">
+                                 <span class="text-xs font-black uppercase tracking-wider">${d.type}</span>
+-                                <span class="text-[11px] font-medium text-gray-500">${shortFile}</span>
++                                <span class="text-[11px] font-medium text-gray-500">${Utils.escapeHTML(shortFile)}</span>
+                             </div>
+                             <span class="text-xs font-bold text-gray-800">${d.records.length} trabajadores · ${d.columns.length} columnas</span>
+                             ${diag}
+@@ -443,7 +453,10 @@
+             const sourceSelect = document.getElementById('tr-source-select');
+             sourceSelect.replaceChildren(...datasets.map((d, i) => { const option = document.createElement('option'); option.value = String(i); option.textContent = `${d.type} — ${d.sourceFile}`; return option; }));
+             TRView.set(analysis);
+-            document.getElementById('tr-processing-status').textContent = 'Carga finalizada.';
++            document.getElementById('tr-reset-all').disabled = false;
++            document.getElementById('tr-reset-all-bottom').disabled = false;
++            UI.resetFileSelection(); // Solo al terminar correctamente. Mantener TRView y AppState.
++            document.getElementById('tr-processing-status').textContent = 'Carga finalizada. Puede seleccionar nuevos TXT; los resultados siguen disponibles.';
+ 
+             Dashboard.registrarEnDrive('VISUALIZACIÓN', {intendencia:processingOffice,modulo:datasets.length === 2 ? 'TR5_TR6' : dataset.type,registros:datasets.reduce((n,d)=>n+d.records.length,0),archivos:files.length,bytes:files.reduce((n,f)=>n+f.size,0),duracionMs:performance.now()-processingStarted});
+ 
+@@ -453,6 +466,9 @@
+             console.error("Detalle del error:", error);
+         } finally {
+             AppState.trBusy = false;
++            const hasResults = !!TRView.analysis;
++            document.getElementById('tr-reset-all').disabled = !hasResults;
++            document.getElementById('tr-reset-all-bottom').disabled = !hasResults;
+             document.getElementById('tr-cancel').disabled = true;
+             document.getElementById('btn_clear_file').disabled = false;
+             document.getElementById('loader').style.display = 'none';
+@@ -545,18 +561,10 @@
+             });
+ 
+             AppState.currentPage = 1;
+-            UI.renderCurrentPage();
+-
+-            if (AppState.currentFilteredRows.length === 0) {
+-                UI.renderCurrentPage();
+-                document.getElementById('pagination_container').classList.add('hidden');
+-            }
++            UI.renderCurrentPage(); // La tabla decide si oculta su paginador.
+         }, 300);
+     },
+ 
+-    downloadExcel() {
+-        TRExport.preview();
+-    }
+ };
+ 
+ // dashboard
+@@ -1014,13 +1022,20 @@
+     document.getElementById('tr-cancel').addEventListener('click', () => Processing.cancel('TR'));
+     // Procesador
+     document.getElementById('tr-source-select').addEventListener('change', event => Core.switchSource(Number(event.target.value)));
++    document.getElementById('tr-charts-details')?.addEventListener('toggle', event => {
++        if (!event.target.open) return;
++        requestAnimationFrame(() => {
++            window.chartFileTipo?.resize();
++            window.chartFileOcup?.resize();
++        });
++    });
+     document.getElementById('intendencia')?.addEventListener('change', UI.toggleProcessor);
+     document.getElementById('file_input')?.addEventListener('change', UI.updateFileStatus);
+     document.getElementById('btn_clear_file')?.addEventListener('click', UI.clearFile);
+     document.getElementById('btn_process_data')?.addEventListener('click', () => Core.processData());
+-    document.getElementById('btn_download_excel')?.addEventListener('click', Core.downloadExcel);
++    ['tr-reset-all', 'tr-reset-all-bottom'].forEach(id => document.getElementById(id)?.addEventListener('click', () => UI.resetWorkspaceTR()));
+     document.getElementById('search_box')?.addEventListener('input', Core.runFilter);
+-    document.getElementById('filter_columna')?.addEventListener('change', Core.runFilter);  // ✅ nuevo
++    document.getElementById('filter_columna')?.addEventListener('change', Core.runFilter);
+     document.getElementById('filter_tipo')?.addEventListener('change', Core.runFilter);
+     document.getElementById('filter_ocupacion')?.addEventListener('change', Core.runFilter);
+ 
+--- a/style.css
++++ b/style.css
+@@ -890,3 +890,23 @@
+     background: #3b82f6;
+     color: white;
+ }
++
++
++/* Mejoras del flujo TR 3.0: UI solamente; datos y exportaciones intactos. */
++.tr-export-accordion { border: 1px solid #cbd9ea; border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 0 5px 18px rgba(17, 52, 92, .07); }
++.tr-export-accordion > summary { background: #eff6ff; color: #09376b; padding: 15px 20px; font-size: 14px; font-weight: 750; cursor: pointer; }
++.tr-export-accordion[open] > summary { border-bottom: 1px solid #cbd9ea; }
++.tr-export-accordion > .card-main { border: 0; margin-top: 0 !important; box-shadow: none; }
++.tr-export-description { color: #475569; line-height: 1.65; font-size: 13px; margin-bottom: 12px; }
++.tr-export-facts { display: block; padding: 11px 14px; margin-bottom: 16px; font-size: 12px; background: #f1f7fd; color: #123f6e; border-left: 3px solid #2d75b4; border-radius: 9px; }
++.tr-finish-bar { margin-top: 15px; padding: 14px 17px; display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; }
++.tr-finish-bar p { margin: 0; font-size: 12px; color: #475569; max-width: 620px; }
++.tr-reset-action { border: 1px solid #b7c5d9; border-radius: 9px; padding: 10px 15px; font-weight: 700; color: #8a2835; background: #fff; }
++.tr-reset-action:hover:not(:disabled) { background: #fff0f2; border-color: #d48b93; }
++.tr-reset-action:disabled { cursor: not-allowed; opacity: .43; }
++html.dark-mode .tr-export-accordion { background: #162032; border-color: #334155; }
++html.dark-mode .tr-export-accordion > summary, html.dark-mode .tr-export-facts { background: #1d3552; color: #dbeafe; border-color: #40618c; }
++html.dark-mode .tr-finish-bar { background: #162032; border-color: #334155; }
++html.dark-mode .tr-finish-bar p { color: #cbd5e1; }
++html.dark-mode .tr-reset-action { color: #ffb6be; border-color: #96505b; background: #2d1b2a; }
++@media(max-width: 650px) { .tr-finish-bar { align-items: stretch; } .tr-reset-action { width: 100%; } }
+--- a/tests/processing-cancel-race.test.cjs
++++ b/tests/processing-cancel-race.test.cjs
+@@ -0,0 +1,23 @@
++const test = require('node:test');
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const vm = require('node:vm');
++
++test('Fallback cancelado no borra una nueva carga RUC iniciada antes de terminar', async () => {
++  const outstanding=[];
++  class Worker { constructor() { throw new Error('worker unavailable'); } }
++  const ctx=vm.createContext({Worker,Promise,Error,Map,console});
++  vm.runInContext(fs.readFileSync(__dirname+'/../processing-client.js','utf8') + '\nglobalThis.api=Processing;',ctx);
++  ctx.api.runFallback=()=>new Promise((resolve,reject)=>outstanding.push({resolve,reject}));
++  const old=ctx.api.run('RUC',[],()=>{});
++  ctx.api.cancel('RUC');
++  await assert.rejects(old, e=>e.name==='AbortError');
++  const newer=ctx.api.run('RUC',[],()=>{});
++  assert.equal(ctx.api.jobs.size,1);
++  outstanding[0].resolve(1);
++  await Promise.resolve();await Promise.resolve();
++  assert.equal(ctx.api.jobs.size,1,'El fallback de la carga cancelada no debe cancelar la nueva carga');
++  outstanding[1].resolve(2);
++  assert.equal(await newer,2);
++  assert.equal(ctx.api.jobs.size,0);
++});
+--- a/tests/tr-analysis.test.cjs
++++ b/tests/tr-analysis.test.cjs
+@@ -20,8 +20,10 @@
+     const datasets = process.argv.slice(2).map(path => parser.parse(parser.decode(fs.readFileSync(path)).text, 'muestra'));
+     const real = tr.build(datasets);
+     assert.equal(real.paired, true);
+-    assert.equal(real.people.reduce((n,p) => n+p.TR5.length+p.TR6.length,0), 243);
+-    console.log(`Muestras reales: ${real.people.length} identidades, 243 registros conservados, ${real.people.filter(p=>p.status==='En ambos').length} en ambos reportes.`);
++    const sourceCount = datasets.reduce((n,d)=>n+d.records.length,0);
++    assert.equal(real.people.reduce((n,p)=>n+p.TR5.length+p.TR6.length,0), sourceCount,
++        'El cruce no debe perder ni duplicar filas originales');
++    console.log(`Muestras reales: ${real.people.length} identidades, ${sourceCount} registros conservados, ${real.people.filter(p=>p.status==='En ambos').length} en ambos reportes.`);
+ }
+ // Pruebas de compatibilidad con variaciones en nombres de columnas de documentos
+ const c = parser.parse(`TR5: reporte\nNRO DE RUC: 20123456789\nTipo de Documento|Número de Documento|Apellido paterno|Apellido materno|Nombres\n01|45678901|Gomez|Luna|Carlos`, 'TR5_var1.txt');
+--- a/tests/tr-export.test.cjs
++++ b/tests/tr-export.test.cjs
+@@ -27,9 +27,12 @@
+ if(process.argv.length>3){
+  const real=tr.build(process.argv.slice(2).map(path=>parser.parse(parser.decode(fs.readFileSync(path)).text,path)));
+  const all=tr.sheets(real,real.people,{});
+- assert.equal(all.find(s=>s.name==='TR5 Original').rows.length,123);
+- assert.equal(all.find(s=>s.name==='TR6 Original').rows.length,122);
+- assert.equal(all.find(s=>s.name==='Fuentes').rows.length,244);
+- console.log('Muestras: 121 trabajadores, 122 filas TR5 y 121 filas TR6 en exportación completa.');
++ const tr5=real.datasets.find(d=>d.type==='TR5');
++ const tr6=real.datasets.find(d=>d.type==='TR6');
++ const total=real.datasets.reduce((n,d)=>n+d.records.length,0);
++ assert.equal(all.find(s=>s.name==='TR5 Original').rows.length, tr5.records.length+1);
++ assert.equal(all.find(s=>s.name==='TR6 Original').rows.length, tr6.records.length+1);
++ assert.equal(all.find(s=>s.name==='Fuentes').rows.length, total+1);
++ console.log(`Muestras: ${real.people.length} trabajadores, ${tr5.records.length} filas TR5 y ${tr6.records.length} filas TR6 exportadas sin pérdida.`);
+ }
+ console.log('OK: alcances, multiplicidad, histórico, originales, trazabilidad e instantánea de exportación.');
+--- a/tests/tr-filters.test.cjs
++++ b/tests/tr-filters.test.cjs
+@@ -27,9 +27,12 @@
+ if(process.argv[2]){
+  const dataset=parser.parse(parser.decode(fs.readFileSync(process.argv[2])).text,'muestra');
+  const actual=tr.build([dataset]);
+- const col=dataset.columns.find(c=>tr.key(c.rawHeader||'')==='FEC. INICIO').index;
++ const target=dataset.columns.find(c=>tr.key(c.rawHeader||'')==='FEC INICIO');
++ assert.ok(target, 'La muestra TR5 requiere columna FEC. INICIO');
++ const col=target.index;
+  const found=actual.people.filter(p=>filters.matches(p,[rule(col,'between','0001-01-01','9999-12-31')],tr.date));
+- assert.equal(found.length,121);
+- console.log('Muestra TR5: 121 trabajadores coinciden con intervalo completo; registros conservados.');
++ const validPeople=actual.people.filter(p=>p.TR5.some(x=>tr.date(x.record.rawCells[col]).iso));
++ assert.equal(found.length,validPeople.length,'El filtro por fechas incluye todas las identidades con fecha válida');
++ console.log(`Muestra TR5: ${found.length} trabajadores coinciden con fechas válidas; ${dataset.records.length} filas originales conservadas.`);
+ }
+ console.log('OK: texto, tildes, fechas inclusivas, vacíos, misma fila, cruce, columnas nuevas y exportación filtrada.');
+--- a/tests/tr-history.test.cjs
++++ b/tests/tr-history.test.cjs
+@@ -26,7 +26,8 @@
+     const data = parser.parse(parser.decode(fs.readFileSync(process.argv[2])).text, 'muestra');
+     const people = tr.build([data]).people;
+     const histories = people.map(p=>tr.history(p));
+-    assert.equal(histories.reduce((n,h)=>n+h.rows.length,0),122);
+-    console.log(`TR5 real: 122 filas conservadas en históricos; ${histories.reduce((n,h)=>n+h.unresolvedDates,0)} fechas sin interpretar.`);
++    const total = histories.reduce((n,h)=>n+h.rows.length,0);
++    assert.equal(total, data.records.length, 'El histórico debe conservar todas las filas TR5 reales');
++    console.log(`TR5 real: ${total} filas conservadas en históricos; ${histories.reduce((n,h)=>n+h.unresolvedDates,0)} fechas sin interpretar.`);
+ }
+ console.log('OK: cronología, repeticiones, vacíos, fechas imposibles, años bisiestos, campos ausentes e integridad.');
+--- a/tests/ui-carga-regresion.test.cjs
++++ b/tests/ui-carga-regresion.test.cjs
+@@ -0,0 +1,99 @@
++/* Copiar este archivo a tests/ del proyecto después de aplicar el parche.
++   Ejecutar: node --test tests/ui-carga-regresion.test.cjs */
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const path = require('node:path');
++const test = require('node:test');
++const repo = path.resolve(__dirname, '..');
++const read = file => fs.readFileSync(path.join(repo, file), 'utf8');
++
++function element(value = '') {
++    const classes = new Set();
++    return {
++        value, textContent: 'Mensaje anterior', options: [], children: ['tarjeta'],
++        classList: {
++            add(c) {classes.add(c);}, remove(c) {classes.delete(c);},
++            toggle(c, on) {if (on) classes.add(c); else classes.delete(c);},
++            contains(c) {return classes.has(c);}
++        },
++        replaceChildren(...items) {this.children = items;}
++    };
++}
++
++test('TR: limpiar selección no borra tablas, fichas, reportes ni archivos en memoria', () => {
++    const src = read('script.js');
++    const start = src.indexOf('    resetFileSelection() {');
++    const end = src.indexOf('    clearFile(event) {', start);
++    assert.ok(start >= 0 && end > start, 'Existe función separada para la limpieza');
++    const body = src.slice(start, end).trim().replace(/,\s*$/, '');
++    const ids = ['file_input','file-cards','file_status','label-content-default','file-info-container'];
++    const nodes = new Map(ids.map(id => [id, element(id === 'file_input' ? 'TR5.txt' : '')]));
++    nodes.get('file-info-container').classList.add('flex');
++    nodes.get('label-content-default').classList.add('hidden');
++    const state = { people: [{ id: '01-00123' }], sheets: ['Resumen', 'TR5 Original'] };
++    const dom = {getElementById(id) {return nodes.get(id)}};
++    const reset = new Function('document', `return ({${body}}).resetFileSelection;`)(dom);
++    reset();
++    assert.equal(nodes.get('file_input').value, '');
++    assert.deepEqual(nodes.get('file-cards').children, []);
++    assert.equal(nodes.get('file_status').textContent, '');
++    assert.equal(nodes.get('label-content-default').classList.contains('hidden'), false);
++    assert.equal(nodes.get('file-info-container').classList.contains('hidden'), true);
++    assert.deepEqual(state.people, [{id:'01-00123'}]);
++    assert.deepEqual(state.sheets, ['Resumen', 'TR5 Original']);
++    assert.match(src, /TRView\.set\(analysis\);[\s\S]*?UI\.resetFileSelection\(\)/);
++    assert.doesNotMatch(src, /TRView\.set\(analysis\);\s*UI\.clearFile\(/);
++});
++
++test('RUC: solo se limpia input si hubo fuentes válidas, sin tocar modelo', () => {
++    const src = read('ruc.js');
++    const start = src.indexOf('            if (model.sources.length > 0) {');
++    const end = src.indexOf('\n            }\n', start);
++    assert.ok(start >= 0 && end > start, 'Existe rama de carga exitosa');
++    const fragment = src.slice(start, end + '\n            }'.length);
++    const file = element('consulta_2026.zip');
++    const model = {sources: []};
++    const statuses = [];
++    const execute = new Function('model','el','status','sources','issues', fragment);
++    execute(model, () => file, s => statuses.push(s), [], ['Archivo inválido']);
++    assert.equal(file.value, 'consulta_2026.zip', 'En lote inválido se permite corregir/reintentar');
++    assert.match(statuses.at(-1), /No se procesó/);
++    model.sources = [{id:1}];
++    execute(model, () => file, s => statuses.push(s), model.sources, []);
++    assert.equal(file.value, '', 'Lote válido libera el input TXT/ZIP');
++    assert.equal(model.sources.length, 1, 'Las fuentes procesadas continúan en memoria');
++});
++
++test('RUC: el selector de ZIP solo se ve en alcance Por ZIP', () => {
++    const src = read('ruc.js');
++    const start = src.indexOf('    function syncZipScope() {');
++    const end = src.indexOf("    el('ruc-export-scope').addEventListener", start);
++    assert.ok(start >= 0 && end > start);
++    const elements = {
++        'ruc-export-scope': {...element('all')},
++        'ruc-export-zip-wrap': element(),
++        'ruc-export-zip': element()
++    };
++    elements['ruc-export-zip'].options = [element('0')];
++    const el = id => elements[id];
++    const sync = new Function('el', src.slice(start,end) + '\nreturn syncZipScope;')(el);
++    sync();
++    assert.equal(elements['ruc-export-zip-wrap'].classList.contains('hidden'), true);
++    assert.equal(elements['ruc-export-zip'].disabled, true);
++    elements['ruc-export-scope'].value = 'zip';
++    sync();
++    assert.equal(elements['ruc-export-zip-wrap'].classList.contains('hidden'), false);
++    assert.equal(elements['ruc-export-zip'].disabled, false);
++});
++
++test('TR: tarjetas rápidas sin opciones duplicadas; exportar respeta su selección', () => {
++    const html = read('index.html');
++    const dropdown = html.slice(html.indexOf('<select id="tr-person-filter"'), html.indexOf('</select>',html.indexOf('<select id="tr-person-filter"')));
++    for (const filter of ['multiple','no_cuspp','no_sctr']) {
++        assert.doesNotMatch(dropdown, new RegExp(`value="${filter}"`));
++        assert.match(html, new RegExp(`data-filter="${filter}"`));
++    }
++    assert.match(read('tr-export.js'), /TRView\.activeQuickFilter !== 'all'/);
++    assert.match(read('tr-analysis.js'), /TRExport\.invalidate\(\);\s*TRView\.page = 0;\s*TRView\.render\(\);/);
++    assert.match(html, /id="ruc-export-zip-wrap" class="min-w-\[180px\] hidden"/);
++});
+--- a/tests/ui-hardening-regresion.test.cjs
++++ b/tests/ui-hardening-regresion.test.cjs
+@@ -0,0 +1,15 @@
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const path = require('node:path');
++const root = path.join(__dirname, '..');
++const file = name => fs.readFileSync(path.join(root, name), 'utf8');
++const filters = require('../tr-filters.js');
++assert.equal(filters.text(null), '');
++assert.equal(filters.text('  Ñandú  '), 'NANDU');
++assert.ok(file('tr-filters.js').includes('label.textContent = description'));
++assert.ok(!file('tr-filters.js').includes('li.innerHTML=`<span'));
++assert.ok(file('ruc.js').includes("Processing.cancel('RUC')"));
++assert.ok(file('tr-analysis.js').includes('Utils.escapeHTML(value ??'));
++assert.ok(file('tr-analysis.js').includes('regimenColumns[1]'));
++assert.ok(!file('index.html').includes('id="tr-column-options"'));
++console.log('OK: seguridad de filtros, cancelación RUC, campos TR6 y UI sin ocultar columnas.');
+--- a/tests/ui-organizacion-regresion.test.cjs
++++ b/tests/ui-organizacion-regresion.test.cjs
+@@ -0,0 +1,107 @@
++/** Contratos de interfaz tras aplicar el kit en el repositorio.
++ * Ejecutar con node --test; solo lee el código, no requiere navegador.
++ */
++const test = require('node:test');
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const path = require('node:path');
++const vm = require('node:vm');
++const root = path.resolve(__dirname, '..');
++const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
++
++test('Orden del lector: carga -> originales -> trabajadores -> Excel', () => {
++  const html = read('index.html');
++  const steps = [
++    'id="page-procesador"',
++    '<!-- PASO 2: Registros originales -->',
++    '<!-- PASO 3: Trabajadores -->',
++    'id="tr-export-center"',
++  ];
++  const positions = steps.map(s => html.indexOf(s));
++  assert.ok(positions.every(n => n > -1), 'Falta alguna sección esencial');
++  assert.deepEqual([...positions].sort((a,b)=>a-b), positions);
++  assert.equal((html.match(/id="tr-export-center"/g)||[]).length, 1);
++  assert.equal((html.match(/id="tr-export-scope"/g)||[]).length, 1);
++  assert.equal((html.match(/id="tr-export-download"/g)||[]).length, 1);
++});
++
++test('El selector de columnas visuales TR y exportación redundante desaparecen; las funciones de Excel se mantienen', () => {
++  const html = read('index.html');
++  const js = read('script.js');
++  const exportJs = read('tr-export.js');
++  assert.ok(!html.includes('id="tr-column-options"'));
++  assert.ok(!html.includes('id="btn_download_excel"'));
++  assert.ok(!js.includes('ColumnChooser.mount(\'tr-column-options\''));
++  assert.ok(js.includes('const cols = AppState.globalCols;'));
++  for (const id of ['tr-export-prepare','tr-export-download','tr-export-details','tr-reset-all','tr-reset-all-bottom','ruc-reset-all']) {
++    assert.ok(html.includes(`id="${id}"`), `${id} ausente`);
++  }
++  assert.ok(exportJs.includes('TRAnalysis.sheets('));
++  assert.ok(exportJs.includes('XLSX.writeFile('));
++  assert.ok(!exportJs.includes('quickDownload()'));
++});
++
++test('Limpiar selección TR no borra datasets; limpiar todo requiere confirmación', () => {
++  const script = read('script.js');
++  const elements = new Map();
++  const node = id => {
++    if (!elements.has(id)) {
++      const states = new Set();
++      elements.set(id, {
++        id, value: '', textContent: '', disabled: false,
++        children: ['simulado'],
++        classList: {
++          add: cls => states.add(cls),
++          remove: cls => states.delete(cls),
++          contains: cls => states.has(cls),
++        },
++        replaceChildren(...children) { this.children = children; },
++      });
++    }
++    return elements.get(id);
++  };
++  let confirmed = false;
++  let resetView = 0;
++  let invalidate = 0;
++  const context = vm.createContext({
++    window: { confirm: () => confirmed, chartFileTipo: null, chartFileOcup: null },
++    document: { getElementById: node, addEventListener() {} },
++    sessionStorage: { getItem: () => null, removeItem() {} },
++    localStorage: { getItem: () => null, setItem() {} },
++    ColumnChooser: { reset() {} },
++    TRView: { reset() { resetView++; } },
++    TRExport: { invalidate() { invalidate++; } },
++    Option: class { constructor(text, value) { this.text=text; this.value=value; } },
++    console, setTimeout, clearTimeout,
++  });
++  vm.runInContext(script + '\nglobalThis.__appState=AppState;globalThis.__ui=UI;', context);
++  const st = context.__appState;
++  node('file_input').value = 'C:/archivo.txt';
++  st.trDatasets = [{ id: 1 }]; st.globalRows = [{ x: 1 }]; st.currentFilteredRows = st.globalRows;
++  context.__ui.clearFile();
++  assert.equal(node('file_input').value, '');
++  assert.equal(st.trDatasets.length, 1, 'Quitar selección no debe borrar el análisis');
++  assert.equal(st.globalRows.length, 1);
++  context.__ui.resetWorkspaceTR();
++  assert.equal(st.globalRows.length, 1, 'Cancelar confirmación conserva todo');
++  confirmed = true;
++  context.__ui.resetWorkspaceTR();
++  assert.equal(st.globalRows.length, 0);
++  assert.equal(st.trDatasets.length, 0);
++  assert.equal(st.currentFilteredRows.length, 0);
++  assert.ok(node('preview_section').classList.contains('hidden'));
++  assert.ok(node('file_metrics_container').classList.contains('hidden'));
++  assert.equal(node('tr-reset-all-bottom').disabled, true);
++  assert.equal(resetView, 1);
++  assert.ok(invalidate > 0);
++});
++
++test('Limpieza RUC separada de selección, exportaciones y fuentes', () => {
++  const js = read('ruc.js');
++  assert.match(js, /ruc-reset-all.*addEventListener\('click'/);
++  assert.ok(js.includes('model = RucModel.consolidate([]);'));
++  assert.ok(js.includes('el(\'ruc-files\').value = \'\';'));
++  assert.ok(js.includes('ColumnChooser.reset(\'ruc-records\');'));
++  assert.ok(js.includes('window.confirm('));
++  assert.ok(js.includes('el(\'ruc-files\').value = \'\'; // No elimina el modelo'));
++});
+--- a/tr-analysis.js
++++ b/tr-analysis.js
+@@ -213,6 +213,8 @@
+     analysis: null, page: 0, selected: new Set(), filtered: [], current: null, activeQuickFilter: 'all',
+     reset() {
+         this.analysis = null; this.page = 0; this.selected.clear(); this.filtered = []; this.current = null; this.activeQuickFilter = 'all';
++        document.getElementById('tr-person-search').value = '';
++        document.getElementById('tr-person-filter').value = 'all';
+         TRFilterUI.reset(); TRExport.invalidate();
+         document.getElementById('tr-diagnostic-preview').replaceChildren();
+         document.getElementById('tr-people').classList.add('hidden');
+@@ -229,7 +231,7 @@
+         if (!this.analysis) return;
+         const people = this.analysis.people;
+         const total = people.length;
+-        const multiple = people.filter(p => p.hasMultipleTR5).length;
++        const multiple = people.filter(p => p.hasMultipleTR5 || p.TR6.length > 1).length;
+         const hasTR6 = people.some(p => p.TR6.length > 0);
+         const noCuspp = hasTR6 ? people.filter(p => p.TR6.length > 0 && !p.hasCuspp).length : 0;
+         const noSctr = hasTR6 ? people.filter(p => p.TR6.length > 0 && !p.hasSctr).length : 0;
+@@ -240,13 +242,17 @@
+         };
+         setVal('qf-total', total);
+         setVal('qf-multiple', multiple);
+-        setVal('qf-no-cuspp', noCuspp);
+-        setVal('qf-no-sctr', noSctr);
++        setVal('qf-no-cuspp', hasTR6 ? noCuspp : '—');
++        setVal('qf-no-sctr', hasTR6 ? noSctr : '—');
++        document.querySelectorAll('.quick-finding-card[data-filter="no_cuspp"], .quick-finding-card[data-filter="no_sctr"]').forEach(btn => {
++            btn.disabled = !hasTR6;
++            btn.title = hasTR6 ? 'Buscar registros que requieren revisión en TR6' : 'No aplica: cargue un reporte TR6 para evaluar esta condición';
++        });
+ 
+         // Highlight active button
+         document.querySelectorAll('.quick-finding-card').forEach(btn => {
+             const f = btn.getAttribute('data-filter');
+-            if (f === this.activeQuickFilter) btn.classList.add('active');
++            if (f === this.activeQuickFilter && (this.activeQuickFilter !== 'all' || document.getElementById('tr-person-filter').value === 'all')) btn.classList.add('active');
+             else btn.classList.remove('active');
+         });
+     },
+@@ -254,8 +260,8 @@
+         if (!this.analysis) return;
+         const el = id => document.getElementById(id);
+         const query = TRAnalysis.key(el('tr-person-search').value);
+-        const filter = el('tr-person-filter').value;
+-        this.activeQuickFilter = filter;
++        // Los accesos rápidos complementan al selector de estado, sin duplicarlo.
++        const filter = this.activeQuickFilter !== 'all' ? this.activeQuickFilter : el('tr-person-filter').value;
+         this.updateQuickFindings();
+ 
+         const people = this.analysis.people.filter(p => {
+@@ -322,8 +328,8 @@
+             if (person.TR5.length > 1) {
+                 const badge = document.createElement('span');
+                 badge.className = 'badge-reingreso';
+-                badge.textContent = `🔁 ${person.TR5.length} contratos`;
+-                badge.title = 'Este trabajador tiene múltiples registros o reingresos en TR5';
++                badge.textContent = `🔁 ${person.TR5.length} filas TR5`;
++                badge.title = 'Hay varias filas TR5; no confirman por sí solas un reingreso';
+                 tdTR5.appendChild(badge);
+             } else if (person.TR5.length === 1) {
+                 tdTR5.innerHTML = `<span class="text-gray-700 font-medium">1</span>`;
+@@ -336,7 +342,7 @@
+             const tdTR6 = document.createElement('td');
+             if (person.TR6.length > 0) {
+                 let sctrBadge = '';
+-                if (person.hasCuspp === false) sctrBadge += ' <span title="Sin CUSPP" class="text-xs text-orange-600 font-bold">⚠️ Sin CUSPP</span>';
++                if (person.hasCuspp === false) sctrBadge += ' <span title="Sin CUSPP" class="text-xs text-orange-600 font-bold">⚠️ CUSPP no registrado</span>';
+                 tdTR6.innerHTML = `<span class="text-gray-700">${person.TR6.length}</span>${sctrBadge}`;
+             } else {
+                 tdTR6.innerHTML = `<span class="text-gray-400 italic">0</span>`;
+@@ -353,10 +359,10 @@
+             // Col 8: Observaciones
+             const tdObs = document.createElement('td');
+             const obs = [];
+-            if (person.hasMultipleTR5) obs.push('<span class="text-amber-700 font-medium text-xs">Reingresos / Sucesión</span>');
++            if (person.hasMultipleTR5) obs.push('<span class="text-amber-700 font-medium text-xs">Múltiples registros TR5</span>');
+             if (person.identityDifference) obs.push('<span class="text-blue-700 text-xs">Diferencia nombres</span>');
+-            if (person.hasCuspp === false) obs.push('<span class="text-orange-700 text-xs">Sin CUSPP</span>');
+-            if (person.hasSctr === false) obs.push('<span class="text-red-700 text-xs">Sin SCTR</span>');
++            if (person.hasCuspp === false) obs.push('<span class="text-orange-700 text-xs">CUSPP no registrado</span>');
++            if (person.hasSctr === false) obs.push('<span class="text-red-700 text-xs">SCTR salud sin marca (verificar)</span>');
+             tdObs.innerHTML = obs.join(' · ') || '<span class="text-gray-400">-</span>';
+             row.appendChild(tdObs);
+ 
+@@ -384,6 +390,7 @@
+         TRExport.invalidate();
+         const container = document.getElementById('tr-person-detail');
+         container.replaceChildren();
++        const safe = value => Utils.escapeHTML(value ?? '');
+ 
+         // Encabezado Ficha
+         const cardHeader = document.createElement('div');
+@@ -391,16 +398,16 @@
+         
+         const infoDiv = document.createElement('div');
+         const badgeRep = person.hasMultipleTR5 
+-            ? `<span class="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-xs font-bold px-2.5 py-1 rounded-full ml-3">🔁 ${person.TR5.length} Contratos / Reingresos</span>`
+-            : `<span class="bg-green-400/20 text-green-300 border border-green-400/30 text-xs font-bold px-2.5 py-1 rounded-full ml-3">✅ Contrato único</span>`;
++            ? `<span class="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-xs font-bold px-2.5 py-1 rounded-full ml-3">🔁 ${person.TR5.length} registros TR5</span>`
++            : `<span class="bg-green-400/20 text-green-300 border border-green-400/30 text-xs font-bold px-2.5 py-1 rounded-full ml-3">1 registro TR5</span>`;
+         
+         infoDiv.innerHTML = `
+             <div class="flex items-center flex-wrap gap-2">
+-                <span class="text-xs font-mono uppercase tracking-widest text-blue-200">${person.type} ${person.number}</span>
++                <span class="text-xs font-mono uppercase tracking-widest text-blue-200">${safe(person.type)} ${safe(person.number)}</span>
+                 ${badgeRep}
+             </div>
+-            <h3 class="text-xl font-bold text-white mt-1">${[...person.names].join(' / ')}</h3>
+-            <p class="text-xs text-blue-200/80 mt-0.5">Estado en reportes: <strong>${person.status}</strong> · ${person.TR5.length} registros TR5, ${person.TR6.length} registros TR6</p>
++            <h3 class="text-xl font-bold text-white mt-1">${safe([...person.names].join(' / '))}</h3>
++            <p class="text-xs text-blue-200/80 mt-0.5">Estado en reportes: <strong>${safe(person.status)}</strong> · ${person.TR5.length} registros TR5, ${person.TR6.length} registros TR6</p>
+         `;
+         cardHeader.appendChild(infoDiv);
+ 
+@@ -428,12 +435,12 @@
+                 <div class="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl mb-6">
+                     <span class="text-2xl">⚠️</span>
+                     <div>
+-                        <h4 class="text-amber-900 font-bold text-sm">Alerta Inspectiva: Trabajador con ${person.TR5.length} contratos / reingresos</h4>
+-                        <p class="text-amber-800 text-xs mt-1">Este trabajador figura en varias filas de TR5 con distintas fechas o condiciones. Verifique si hubo continuidad laboral encubierta (desnaturalización de contratos modales) o si existió liquidación de beneficios sociales entre cada periodo.</p>
++                        <h4 class="text-amber-900 font-bold text-sm">Indicador de revisión: ${person.TR5.length} registros TR5</h4>
++                        <p class="text-amber-800 text-xs mt-1">Existen varias filas de TR5 para el mismo documento. No constituyen por sí solas prueba de reingreso, continuidad ni incumplimiento; contraste las fechas y condiciones con los documentos laborales.</p>
+                     </div>
+                 </div>
+                 <h4 class="font-bold text-gray-900 text-base mb-4 flex items-center gap-2">
+-                    <span>Línea de Tiempo de Contrataciones (Cronológico)</span>
++                    <span>Cronología de filas TR5 (por fecha informada)</span>
+                     <span class="text-xs font-normal text-gray-500">(${history.dates.length} fechas distintas)</span>
+                 </h4>
+             `;
+@@ -451,23 +458,23 @@
+                     <div class="bg-gray-50 hover:bg-white p-4 rounded-xl border border-gray-200 shadow-xs transition-all">
+                         <div class="flex flex-wrap items-center justify-between gap-2 border-b pb-2 mb-2">
+                             <div class="flex items-center gap-2">
+-                                <span class="text-xs font-bold text-blue-900 bg-blue-100 px-2 py-0.5 rounded">Inicio: ${item.start || 'No indicada'}</span>
++                                <span class="text-xs font-bold text-blue-900 bg-blue-100 px-2 py-0.5 rounded">Inicio: ${safe(item.start || 'No indicada')}</span>
+                                 <span class="text-xs text-gray-400 font-mono">Fila ${item.record.sourceRow}</span>
+                             </div>
+-                            <span class="text-xs text-gray-500">${item.dataset.sourceFile}</span>
++                            <span class="text-xs text-gray-500">${safe(item.dataset.sourceFile)}</span>
+                         </div>
+                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                             <div>
+                                 <span class="text-gray-400 block">Tipo de Contrato</span>
+-                                <strong class="text-gray-800">${item.contract || 'No registrado'}</strong>
++                                <strong class="text-gray-800">${safe(item.contract || 'No registrado')}</strong>
+                             </div>
+                             <div>
+                                 <span class="text-gray-400 block">Ocupación / Puesto</span>
+-                                <strong class="text-gray-800">${item.occupation || 'No registrado'}</strong>
++                                <strong class="text-gray-800">${safe(item.occupation || 'No registrado')}</strong>
+                             </div>
+                             <div>
+                                 <span class="text-gray-400 block">Establecimiento</span>
+-                                <strong class="text-gray-800">${item.establishment || 'No registrado'}</strong>
++                                <strong class="text-gray-800">${safe(item.establishment || 'No registrado')}</strong>
+                             </div>
+                         </div>
+                     </div>
+@@ -484,24 +491,24 @@
+             singleSection.innerHTML = `
+                 <h4 class="font-bold text-gray-900 text-base mb-3 flex items-center gap-2">
+                     <span>Datos de la Relación Laboral (TR5)</span>
+-                    <span class="text-xs font-bold text-green-700 bg-green-50 border border-green-200 px-2.5 py-0.5 rounded-full">Contrato Único</span>
++                    <span class="text-xs font-bold text-green-700 bg-green-50 border border-green-200 px-2.5 py-0.5 rounded-full">Un registro TR5</span>
+                 </h4>
+                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-xl text-xs">
+                     <div>
+                         <span class="text-gray-500 block mb-1">Fecha de Ingreso</span>
+-                        <strong class="text-base text-blue-900 font-bold">${singleItem?.start || 'No indicada'}</strong>
++                        <strong class="text-base text-blue-900 font-bold">${safe(singleItem?.start || 'No indicada')}</strong>
+                     </div>
+                     <div>
+                         <span class="text-gray-500 block mb-1">Tipo de Contrato</span>
+-                        <strong class="text-gray-800">${singleItem?.contract || 'No registrado'}</strong>
++                        <strong class="text-gray-800">${safe(singleItem?.contract || 'No registrado')}</strong>
+                     </div>
+                     <div>
+                         <span class="text-gray-500 block mb-1">Ocupación</span>
+-                        <strong class="text-gray-800">${singleItem?.occupation || 'No registrado'}</strong>
++                        <strong class="text-gray-800">${safe(singleItem?.occupation || 'No registrado')}</strong>
+                     </div>
+                     <div>
+                         <span class="text-gray-500 block mb-1">Establecimiento</span>
+-                        <strong class="text-gray-800">${singleItem?.establishment || 'No registrado'}</strong>
++                        <strong class="text-gray-800">${safe(singleItem?.establishment || 'No registrado')}</strong>
+                     </div>
+                 </div>
+             `;
+@@ -516,29 +523,33 @@
+             const tr6RecordsHtml = person.TR6.map(item => {
+                 const getCell = colName => {
+                     const idx = item.dataset.columns.findIndex(c => TRAnalysis.key(c.rawHeader || '').includes(colName));
+-                    return idx >= 0 ? (item.record.rawCells[idx] || '').trim() : '-';
++                    return idx >= 0 ? (item.record.rawCells[idx] || '').trim() : '';
+                 };
++                // TR6 puede repetir el título "Tipo de Régimen" en salud y pensiones.
++                // Conservar posiciones en vez de tomar siempre la primera coincidencia.
++                const regimenColumns = item.dataset.columns.filter(c => TRAnalysis.key(c.rawHeader || '').includes('REGIMEN'));
++                const read = column => column ? (item.record.rawCells[column.index] || '').trim() : '';
+                 const cuspp = getCell('CUSPP');
+-                const regimenSalud = getCell('REGIMEN') || getCell('SALUD');
+-                const regimenPension = getCell('PENSION') || getCell('SISTEMA');
++                const regimenSalud = read(regimenColumns[0]) || getCell('SALUD');
++                const regimenPension = read(regimenColumns[1]) || getCell('PENSION');
+ 
+                 return `
+                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-blue-50/50 rounded-xl text-xs border border-blue-100 mb-2">
+                         <div>
+                             <span class="text-gray-500 block mb-1">Aseguramiento de Salud</span>
+-                            <strong class="text-gray-800">${regimenSalud || 'ESSALUD'}</strong>
++                            <strong class="text-gray-800">${safe(regimenSalud || 'No registrado')}</strong>
+                         </div>
+                         <div>
+                             <span class="text-gray-500 block mb-1">Régimen Pensionario</span>
+-                            <strong class="text-gray-800">${regimenPension || 'No registrado'}</strong>
++                            <strong class="text-gray-800">${safe(regimenPension || 'No registrado')}</strong>
+                         </div>
+                         <div>
+                             <span class="text-gray-500 block mb-1">Código CUSPP</span>
+-                            <strong class="${cuspp ? 'text-gray-900 font-mono' : 'text-orange-600 font-bold'}">${cuspp || '⚠️ Sin CUSPP'}</strong>
++                            <strong class="${cuspp ? 'text-gray-900 font-mono' : 'text-orange-600 font-bold'}">${safe(cuspp || '⚠️ Sin CUSPP identificado')}</strong>
+                         </div>
+                         <div>
+-                            <span class="text-gray-500 block mb-1">Cobertura SCTR</span>
+-                            <strong class="${person.hasSctr ? 'text-green-700' : 'text-red-700'}">${person.hasSctr ? '✅ SCTR Activo' : '🛡️ Sin SCTR detectado'}</strong>
++                            <span class="text-gray-500 block mb-1">SCTR salud (indicador)</span>
++                            <strong class="${person.hasSctr ? 'text-green-700' : 'text-red-700'}">${person.hasSctr ? 'SCTR salud marcado en TR6' : '🛡️ SCTR salud no detectado (verificar)'}</strong>
+                         </div>
+                     </div>
+                 `;
+@@ -565,7 +576,7 @@
+             person[type].forEach(({record, dataset}) => {
+                 const box = document.createElement('div');
+                 box.className = 'bg-white p-3 rounded-lg border border-gray-200';
+-                box.innerHTML = `<span class="font-bold text-blue-900">${type} · ${dataset.sourceFile} (Fila ${record.sourceRow})</span>`;
++                box.innerHTML = `<span class="font-bold text-blue-900">${type} · ${safe(dataset.sourceFile)} (Fila ${record.sourceRow})</span>`;
+                 const pre = document.createElement('pre');
+                 pre.className = 'overflow-auto mt-1 p-2 bg-gray-100 rounded text-[11px] text-gray-800';
+                 pre.textContent = record.rawLine;
+@@ -584,6 +595,7 @@
+     ['tr-person-search', 'tr-person-filter'].forEach(id => {
+         const el = document.getElementById(id);
+         if (el) el.addEventListener(id.endsWith('search') ? 'input' : 'change', () => {
++            if (id === 'tr-person-filter') TRView.activeQuickFilter = 'all';
+             TRExport.invalidate();
+             TRView.page = 0;
+             TRView.render();
+@@ -612,7 +624,9 @@
+             const filterVal = btn.getAttribute('data-filter') || 'all';
+             const selectEl = document.getElementById('tr-person-filter');
+             if (selectEl) {
+-                selectEl.value = filterVal;
++                selectEl.value = 'all';
++                TRView.activeQuickFilter = filterVal;
++                TRExport.invalidate();
+                 TRView.page = 0;
+                 TRView.render();
+             }
+--- a/tr-export.js
++++ b/tr-export.js
+@@ -8,7 +8,7 @@
+     syncScopeOptions() {
+         // Calcula el estado actual para mostrar/ocultar opciones del desplegable
+         const hasSearch = (document.getElementById('tr-person-search')?.value || '').trim() !== '';
+-        const hasFilter = document.getElementById('tr-person-filter')?.value !== 'all';
++        const hasFilter = document.getElementById('tr-person-filter')?.value !== 'all' || TRView.activeQuickFilter !== 'all';
+         const hasAdvanced = TRFilterUI.rules.length > 0;
+         const hasSelected = TRView.selected && TRView.selected.size > 0;
+         const hasCurrent = !!TRView.current;
+@@ -29,6 +29,13 @@
+             }
+         };
+ 
++        const info = document.getElementById('tr-export-dataset-info');
++        if (info && TRView.analysis) {
++            const a = TRView.analysis;
++            const total = a.datasets.reduce((n, d) => n + d.records.length, 0);
++            const types = a.datasets.map(d => d.type).join(' + ');
++            info.textContent = `${types} · ${a.datasets.length} archivo(s) · ${a.people.length} trabajadores · ${total} registros originales · ${a.company || 'Entidad sin razón social identificada'}`;
++        }
+         const filteredCount = TRView.filtered ? TRView.filtered.length : 0;
+         const selectedCount = TRView.selected ? TRView.selected.size : 0;
+ 
+@@ -58,10 +65,11 @@
+         const el = id=>document.getElementById(id), scope = el('tr-export-scope');
+         const people = TRAnalysis.scope(TRView.analysis,scope.value,TRView.selected,TRView.filtered,TRView.current);
+         if (!people.length) return Utils.showToast('El alcance elegido no contiene trabajadores. Seleccione trabajadores o abra una ficha.', 'info');
+-        const filterDescription = [el('tr-person-filter').selectedOptions[0].textContent,...TRFilterUI.descriptions()].join(' · ');
++        const quickLabels = { multiple: 'Múltiples registros', no_cuspp: 'Sin CUSPP', no_sctr: 'Sin SCTR detectado' };
++        const filterDescription = [quickLabels[TRView.activeQuickFilter] || el('tr-person-filter').selectedOptions[0].textContent,...TRFilterUI.descriptions()].join(' · ');
+         const sheets = TRAnalysis.sheets(TRView.analysis,people,{intendencia:AppState.intendencia,scope:scope.selectedOptions[0].textContent,query:el('tr-person-search').value,filter:filterDescription});
+         if (sheets.some(s=>s.rows.length>1048576 || s.rows.some(r=>r.length>16384 || r.some(v=>typeof v==='string' && v.length>32767)))) return Utils.showToast('El alcance supera los límites de Excel. Redúzcalo para evitar pérdida de datos.', 'info');
+-        this.snapshot = {sheets,intendencia:AppState.intendencia,metadata:{intendencia:AppState.intendencia,modulo:TRView.analysis.datasets.length===2?'TR5_TR6':TRView.analysis.datasets[0].type,registros:people.reduce((n,p)=>n+p.TR5.length+p.TR6.length,0),archivos:TRView.analysis.datasets.length}};
++        this.snapshot = {sheets,intendencia:AppState.intendencia,scopeCode:scope.value,metadata:{intendencia:AppState.intendencia,modulo:TRView.analysis.datasets.length===2?'TR5_TR6':TRView.analysis.datasets[0].type,registros:people.reduce((n,p)=>n+p.TR5.length+p.TR6.length,0),archivos:TRView.analysis.datasets.length}};
+         el('tr-export-summary').textContent = `${scope.selectedOptions[0].textContent}: ${people.length} trabajadores · ${people.reduce((n,p)=>n+p.TR5.length+p.TR6.length,0)} registros. Se incluyen todas las columnas originales.`;
+         el('tr-export-summary').textContent += ` Filtros de la vista: ${filterDescription}. Solo se aplican al alcance Trabajadores filtrados.`;
+         el('tr-export-sheets').replaceChildren(...sheets.map(s=>{ const li=document.createElement('li'); li.textContent=`${s.name}: ${s.rows.length-1} filas · ${s.rows[0].length} columnas`; return li; }));
+@@ -217,43 +225,16 @@
+                 const styledSheet = this.formatWorksheet(rawSheet, s.name);
+                 XLSX.utils.book_append_sheet(workbook, styledSheet, s.name);
+             });
+-            const filename = this.getFilename(TRView.analysis, this.snapshot.intendencia);
++            const filenameBase = this.getFilename(TRView.analysis, this.snapshot.intendencia);
++            const filename = this.snapshot.scopeCode && this.snapshot.scopeCode !== 'all'
++                ? filenameBase.replace(/\.xlsx$/i, `_${this.snapshot.scopeCode}.xlsx`)
++                : filenameBase;
+             XLSX.writeFile(workbook, filename);
+             Dashboard.registrarEnDrive('DESCARGAR_EXCEL',this.snapshot.metadata);
+             Utils.showToast(`Excel descargado correctamente: ${filename}`, 'success');
+         } catch(error) { Utils.showToast(`No se pudo generar el Excel: ${error.message}`); }
+     },
+-    quickDownload() {
+-        if (!UI.requireIntendencia() || AppState.trBusy) return;
+-        if (!TRView.analysis) return Utils.showToast('Primero cargue los reportes TR5 o TR6.', 'info');
+-        const people = TRView.analysis.people;
+-        if (!people.length) return Utils.showToast('No hay trabajadores para exportar.', 'info');
+-        try {
+-            const sheets = TRAnalysis.sheets(TRView.analysis, people, {
+-                intendencia: AppState.intendencia,
+-                scope: 'Completo (Informe de Inspección)',
+-                query: '',
+-                filter: 'Sin filtros aplicados'
+-            });
+-            const workbook = XLSX.utils.book_new();
+-            sheets.forEach(s => {
+-                const rawSheet = XLSX.utils.aoa_to_sheet(s.rows);
+-                const styledSheet = this.formatWorksheet(rawSheet, s.name);
+-                XLSX.utils.book_append_sheet(workbook, styledSheet, s.name);
+-            });
+-            const filename = this.getFilename(TRView.analysis, AppState.intendencia);
+-            XLSX.writeFile(workbook, filename);
+-            Dashboard.registrarEnDrive('DESCARGAR_EXCEL', {
+-                intendencia: AppState.intendencia,
+-                modulo: TRView.analysis.datasets.length === 2 ? 'TR5_TR6' : TRView.analysis.datasets[0].type,
+-                registros: people.reduce((n, p) => n + p.TR5.length + p.TR6.length, 0),
+-                archivos: TRView.analysis.datasets.length
+-            });
+-            Utils.showToast(`Excel descargado correctamente: ${filename}`, 'success');
+-        } catch(error) {
+-            Utils.showToast(`No se pudo generar el Excel: ${error.message}`);
+-        }
+-    }
++
+ };
+ if (typeof document !== 'undefined') {
+     document.addEventListener('DOMContentLoaded',()=>{
+@@ -267,7 +248,12 @@
+         document.getElementById('tr-export-prepare').addEventListener('click',()=>TRExport.preview());
+         document.getElementById('tr-export-download').addEventListener('click',()=>TRExport.download());
+         const directBtn = document.getElementById('tr-direct-download-excel');
+-        if (directBtn) directBtn.addEventListener('click', () => TRExport.quickDownload());
++        if (directBtn) directBtn.addEventListener('click', () => {
++            const details = document.getElementById('tr-export-details');
++            if (details) details.open = true;
++            document.getElementById('tr-export-center')?.scrollIntoView({behavior:'smooth', block:'start'});
++            document.getElementById('tr-export-scope')?.focus();
++        });
+     });
+ }
+ if (typeof module !== 'undefined' && module.exports) module.exports = TRExport;
+--- a/tr-filters.js
++++ b/tr-filters.js
+@@ -1,5 +1,5 @@
+ const TRFilters = {
+-    text(value) { return value.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase(); },
++    text(value) { return String(value ?? '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase(); },
+     matches(person, rules, parseDate) {
+         return ['TR5', 'TR6'].every(type => {
+             const conditions = rules.filter(r => r.type === type);
+@@ -44,7 +44,10 @@
+         list.replaceChildren(...this.descriptions().map((description,i)=>{
+             const li=document.createElement('li');
+             li.className='filter-chip-item';
+-            li.innerHTML=`<span class="filter-chip-label">${description}</span>`;
++            const label = document.createElement('span');
++            label.className = 'filter-chip-label';
++            label.textContent = description; // Datos TXT nunca se insertan como HTML.
++            li.appendChild(label);
+             const button=document.createElement('button');
+             button.innerHTML='&times;';
+             button.className='filter-chip-remove';
+@@ -89,6 +92,9 @@
+         const operator=el('tr-filter-operator').value,empty=['empty','notEmpty'].includes(operator),value=empty?'':el('tr-filter-value').value.trim(),end=operator==='between'?el('tr-filter-end').value:'';
+         if(!empty && !value) return Utils.showToast('Ingrese un valor para el filtro.','info');
+         if(['from','to','between','dateEquals'].includes(operator) && (!TRAnalysis.date(value).iso || (operator==='between' && (!TRAnalysis.date(end).iso || value>end)))) return Utils.showToast('Ingrese fechas válidas y un intervalo en orden.','info');
++        if (this.rules.some(r => r.type === field.type && r.index === field.index && r.operator === operator && r.value === value && r.end === end)) {
++            return Utils.showToast('Este filtro ya está aplicado.', 'info');
++        }
+         this.rules.push({...field,operator,value,end});this.changed();
+     }
+ };

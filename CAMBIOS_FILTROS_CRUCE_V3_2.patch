@@ -1,0 +1,745 @@
+--- a/index.html
++++ b/index.html
+@@ -349,9 +349,9 @@
+                 <div class="step-header">
+                     <span class="step-number">2</span>
+                     <div>
+                         <h2 class="step-title">Registros originales del reporte</h2>
+-                        <p class="step-subtitle">Consulte las filas exactas de cada archivo TR cargado. Esta tabla conserva todas las filas y columnas del TXT, sin combinar registros. Para exportar un subconjunto de trabajadores utilice los filtros del paso 3.</p>
++                        <p class="step-subtitle">Revise las filas originales sin modificar datos. La búsqueda de esta tabla es solo de consulta; para filtrar y exportar trabajadores utilice el paso 3.</p>
+                     </div>
+                 </div>
+                 <div class="flex flex-wrap gap-4 items-end mb-3">
+                     <div class="min-w-[240px]">
+@@ -382,25 +382,9 @@
+                         <div class="flex-1 min-w-[150px]">
+                             <label for="search_box" class="form-label">Buscar en registros</label>
+                             <input type="text" id="search_box" placeholder="Buscar…" class="form-input">
+                         </div>
+-                        <details class="w-full tr-optional-details">
+-                            <summary class="text-xs font-semibold text-[#003366] cursor-pointer py-2">Filtros adicionales de registros (columna, tipo y ocupación)</summary>
+-                            <div class="flex flex-wrap gap-3 items-end mt-2">
+-                        <div class="min-w-[140px]">
+-                            <label for="filter_columna" class="form-label">Columna</label>
+-                            <select id="filter_columna" class="form-select"><option value="">🔍 Todas las columnas</option></select>
+-                        </div>
+-                        <div class="min-w-[130px]">
+-                            <label for="filter_tipo" class="form-label">Tipo documento</label>
+-                            <select id="filter_tipo" class="form-select"><option value="">-- Todos los Tipos --</option></select>
+-                        </div>
+-                        <div class="min-w-[150px]">
+-                            <label for="filter_ocupacion" class="form-label">Ocupación</label>
+-                            <select id="filter_ocupacion" class="form-select"><option value="">-- Todas las Ocupaciones --</option></select>
+-                        </div>
+-                            </div>
+-                        </details>
++
+                     </div>
+                     <div class="overflow-auto max-h-[500px]">
+                         <table class="w-full text-left text-[10px] tracking-tight uppercase" id="data_table">
+                             <thead class="bg-gray-100 sticky top-0"><tr id="table_head" class="text-[#003366]"></tr></thead>
+@@ -466,34 +450,54 @@
+                     </button>
+                 </div>
+ 
+                 <div class="card-main bg-white overflow-hidden">
+-                    <div class="px-6 py-4 border-b bg-gray-50 flex flex-wrap gap-3 items-end">
+-                        <div class="flex-1 min-w-[180px]">
+-                            <label for="tr-person-search" class="form-label">Buscar trabajador</label>
+-                            <input id="tr-person-search" type="text" class="form-input" placeholder="DNI, apellido o nombre…">
+-                        </div>
+-                        <div class="min-w-[220px]">
+-                            <label for="tr-person-filter" class="form-label">Estado o condición</label>
+-                            <select id="tr-person-filter" class="form-select">
+-                                <option value="all">👥 Todos los trabajadores</option>
+-                                <option value="En ambos">✅ En ambos reportes (TR5 + TR6)</option>
+-                                <option value="Solo TR5">📄 Solo en TR5</option>
+-                                <option value="Solo TR6">📄 Solo en TR6</option>
+-                                <option value="differences">⚠️ Diferencias de identidad</option>
+-                                <option value="selected">⭐ Selección de trabajo</option>
+-                                <option value="Identidad incompleta">❌ Identidad incompleta</option>
+-                            </select>
+-                        </div>
+-                        <div class="flex gap-2 flex-wrap">
+-                            <button id="tr-select-filtered" class="btn-ghost text-xs">
+-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+-                                Seleccionar todos los filtrados
+-                            </button>
+-                            <button id="tr-clear-selection" class="btn-ghost text-xs">
+-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+-                                Limpiar selección
+-                            </button>
++                    <!-- Filtros del cruce: se aplican a trabajadores y a la exportación filtrada. -->
++                    <div class="tr-cross-filters px-6 py-5 border-b bg-gray-50">
++                        <div class="flex flex-wrap items-end gap-3">
++                            <div class="flex-1 min-w-[210px]">
++                                <label for="tr-person-search" class="form-label">Buscar trabajador</label>
++                                <input id="tr-person-search" type="search" class="form-input" autocomplete="off" placeholder="Apellido, nombre, DNI, oficio…">
++                            </div>
++                            <div class="min-w-[190px] flex-1">
++                                <label for="tr-worker-field" class="form-label">Columna de búsqueda</label>
++                                <select id="tr-worker-field" class="form-select">
++                                    <option value="all">Todos los campos</option>
++                                </select>
++                            </div>
++                            <div class="min-w-[165px] flex-1">
++                                <label for="tr-worker-type" class="form-label">Tipo de documento</label>
++                                <select id="tr-worker-type" class="form-select">
++                                    <option value="">Todos los tipos</option>
++                                </select>
++                            </div>
++                            <div class="min-w-[200px] flex-1">
++                                <label for="tr-worker-occupation" class="form-label">Oficio u ocupación</label>
++                                <select id="tr-worker-occupation" class="form-select">
++                                    <option value="">Todas las ocupaciones</option>
++                                </select>
++                            </div>
++                            <div class="min-w-[170px] flex-1">
++                                <label for="tr-person-filter" class="form-label">Presencia o condición</label>
++                                <select id="tr-person-filter" class="form-select">
++                                    <option value="all">Todos los trabajadores</option>
++                                    <option value="En ambos">En ambos reportes</option>
++                                    <option value="Solo TR5">Solo TR5</option>
++                                    <option value="Solo TR6">Solo TR6</option>
++                                    <option value="differences">Diferencias de identidad</option>
++                                    <option value="selected">Selección de trabajo</option>
++                                    <option value="Identidad incompleta">Identidad incompleta</option>
++                                </select>
++                            </div>
++                        </div>
++                        <div class="flex flex-wrap justify-between gap-3 items-center mt-4">
++                            <p class="text-xs text-gray-600 flex-1" id="tr-cross-filter-summary" role="status" aria-live="polite">Seleccione un reporte para consultar trabajadores.</p>
++                            <button id="tr-cross-filter-clear" type="button" class="btn-ghost text-xs">Limpiar filtros del cruce</button>
++                            <button id="tr-export-current-filter" type="button" disabled class="btn-excel text-xs py-2.5 px-4 text-white font-semibold rounded-lg">Exportar resultados filtrados</button>
++                        </div>
++                        <div class="flex flex-wrap items-center gap-2 mt-3">
++                            <button id="tr-select-filtered" type="button" class="btn-ghost text-xs">Seleccionar trabajadores encontrados</button>
++                            <button id="tr-clear-selection" type="button" class="btn-ghost text-xs">Limpiar selección</button>
+                         </div>
+                     </div>
+                     <div class="px-6 py-2 border-b">
+                         <p id="tr-selection-count" role="status" class="text-xs text-gray-500"></p>
+@@ -587,8 +591,9 @@
+                     <div class="card-main bg-white p-6 mt-2" aria-labelledby="tr-export-title">
+                         <h4 id="tr-export-title" class="font-bold text-[#003366] mb-2">Prepare el archivo Excel para su informe</h4>
+                         <p class="tr-export-description">Elija el alcance, compruebe el contenido y descargue el Excel. Se conservan columnas, filas originales, fechas, ceros iniciales y fuentes.</p>
+                         <p id="tr-export-dataset-info" class="tr-export-facts" role="status"></p>
++                        <p class="text-xs text-gray-600 mb-3">Para descargar los trabajadores encontrados, aplique filtros en el paso 3 y elija <strong>Resultados del filtro aplicado</strong>. Se incluyen todas las filas TR5/TR6 asociadas y todas sus columnas originales.</p>
+                         <div class="flex flex-wrap gap-4 items-end">
+                             <div class="flex-1 min-w-[220px]">
+                                 <label for="tr-export-scope" class="form-label">Contenido del archivo Excel</label>
+                                 <select id="tr-export-scope" class="form-select">
+@@ -728,13 +733,13 @@
+     <script src="sheets-api.js?v=2.6"></script>
+     <script src="processing-client.js?v=3.1"></script>
+     <script src="diagnostics.js?v=2.6"></script>
+     <script src="column-chooser.js?v=2.6"></script>
+-    <script src="tr-analysis.js?v=3.1"></script>
+-    <script src="tr-filters.js?v=3.1"></script>
+-    <script src="tr-export.js?v=3.1"></script>
++    <script src="tr-analysis.js?v=3.2"></script>
++    <script src="tr-filters.js?v=3.2"></script>
++    <script src="tr-export.js?v=3.2"></script>
+     <script src="vendor/jszip.min.js"></script>
+-    <script src="script.js?v=3.1"></script>
++    <script src="script.js?v=3.2"></script>
+     <script src="ruc.js?v=3.1"></script>
+     <!-- Sincroniza botones de vista Registros/Empresas con el select oculto que escucha ruc.js -->
+     <script>
+         document.addEventListener('DOMContentLoaded', function () {
+--- a/script.js
++++ b/script.js
+@@ -210,12 +210,8 @@
+          'tr-person-summary', 'tr-selection-count'].forEach(id => {
+             document.getElementById(id)?.replaceChildren();
+         });
+         document.getElementById('search_box').value = '';
+-        ['filter_tipo', 'filter_ocupacion', 'filter_columna'].forEach(id => {
+-            const select = document.getElementById(id);
+-            if (select) select.replaceChildren(new Option('Sin filtro', ''));
+-        });
+         if (window.chartFileTipo) { window.chartFileTipo.destroy(); window.chartFileTipo = null; }
+         if (window.chartFileOcup) { window.chartFileOcup.destroy(); window.chartFileOcup = null; }
+         document.getElementById('tr-processing-status').textContent = 'Consulta finalizada. Puede cargar un nuevo reporte.';
+         document.getElementById('tr-reset-all').disabled = true;
+@@ -315,21 +311,8 @@
+             conteoTipos[t] = (conteoTipos[t] || 0) + 1;
+             conteoOcup[o] = (conteoOcup[o] || 0) + 1;
+         });
+ 
+-        // 1. Rellenar Combobox de Filtros
+-        const selectTipo = document.getElementById('filter_tipo');
+-        if (selectTipo) {
+-            selectTipo.innerHTML = '<option value="">-- Todos los Tipos --</option>' +
+-                Object.keys(conteoTipos).sort().map(t => `<option value="${Utils.escapeHTML(t)}">${Utils.escapeHTML(t)}</option>`).join('');
+-        }
+-
+-        const selectOcup = document.getElementById('filter_ocupacion');
+-        if (selectOcup) {
+-            selectOcup.innerHTML = '<option value="">-- Todas las Ocupaciones --</option>' +
+-                Object.keys(conteoOcup).sort().map(o => `<option value="${Utils.escapeHTML(o)}">${Utils.escapeHTML(o)}</option>`).join('');
+-        }
+-
+         // --- 2. Dibujar Gráficos Minilíticos ---
+         const ctxTipo = document.getElementById('chart-file-tipo');
+         if (window.chartFileTipo) window.chartFileTipo.destroy();
+         if (ctxTipo && typeof Chart !== 'undefined') {
+@@ -410,19 +393,8 @@
+             if (AppState.globalRows.length === 0) throw new Error("No se encontraron datos después de los encabezados.");
+ 
+             UI.drawTable(AppState.globalRows, AppState.globalCols);
+             UI.renderFileMetricsAndFilters(AppState.globalRows);
+-
+-            //el selector de búsqueda por columna
+-            const selectCol = document.getElementById('filter_columna');
+-            if (selectCol) {
+-                selectCol.innerHTML = '<option value="">🔍 Todas las columnas</option>' +
+-                    AppState.globalCols
+-                        .filter(c => c !== 'N°')
+-                        .map(c => `<option value="${Utils.escapeHTML(c)}">${Utils.escapeHTML(c)}</option>`)
+-                        .join('');
+-            }
+-
+ 
+             document.getElementById('preview_section').classList.remove('hidden');
+             // Actualizar tarjetas de archivo con datos reales del dataset procesado
+             const fileCards = document.getElementById('file-cards');
+@@ -482,10 +454,8 @@
+         const { rows, cols } = FileParser.table(dataset);
+         AppState.sourceDataset = dataset; AppState.globalRows = rows; AppState.globalCols = cols;
+         UI.renderInfoBox(Core.extractCompanyInfo(dataset.text.split(/\r\n|\n|\r/), dataset));
+         document.getElementById('search_box').value = '';
+-        const select = document.getElementById('filter_columna');
+-        select.replaceChildren(...['', ...cols].map(c => { const option = document.createElement('option'); option.value = c; option.textContent = c || 'Todas las columnas'; return option; }));
+         UI.drawTable(rows, cols); UI.renderFileMetricsAndFilters(rows);
+     },
+ 
+     extractCompanyInfo(linesOrDataset, maybeDataset) {
+@@ -536,26 +506,13 @@
+     runFilter() {
+         clearTimeout(AppState.searchDebounceTimeout);
+         AppState.searchDebounceTimeout = setTimeout(() => {
+             const query = document.getElementById('search_box').value.toLowerCase().trim();
+-            const filterTipo = document.getElementById('filter_tipo')?.value || "";
+-            const filterOcup = document.getElementById('filter_ocupacion')?.value || "";
+-            const filterCol = document.getElementById('filter_columna')?.value || "";
+-
+             AppState.currentFilteredRows = AppState.globalRows.filter(row => {
+                 let match = true;
+ 
+-                // Dropdowns de tipo y ocupación
+-                if (filterTipo && row["Tipo Doc."] !== filterTipo) match = false;
+-                if (filterOcup && row["Ocupación"] !== filterOcup) match = false;
+-
+-                // Búsqueda de texto: en columna específica o en todas
+-                if (match && query) {
+-                    if (filterCol) {
+-                        match = String(row[filterCol] || '').toLowerCase().includes(query);
+-                    } else {
+-                        match = Object.values(row).some(val => String(val).toLowerCase().includes(query));
+-                    }
++                if (query) {
++                    match = Object.values(row).some(value => String(value ?? '').toLowerCase().includes(query));
+                 }
+ 
+                 return match;
+             });
+@@ -1034,11 +991,8 @@
+     document.getElementById('btn_clear_file')?.addEventListener('click', UI.clearFile);
+     document.getElementById('btn_process_data')?.addEventListener('click', () => Core.processData());
+     ['tr-reset-all', 'tr-reset-all-bottom'].forEach(id => document.getElementById(id)?.addEventListener('click', () => UI.resetWorkspaceTR()));
+     document.getElementById('search_box')?.addEventListener('input', Core.runFilter);
+-    document.getElementById('filter_columna')?.addEventListener('change', Core.runFilter);
+-    document.getElementById('filter_tipo')?.addEventListener('change', Core.runFilter);
+-    document.getElementById('filter_ocupacion')?.addEventListener('change', Core.runFilter);
+ 
+     // Modo Oscuro — toggle + persistencia
+     const btnDark = document.getElementById('btn-dark-mode');
+     const applyDark = (on) => {
+--- a/tr-analysis.js
++++ b/tr-analysis.js
+@@ -19,9 +19,9 @@
+                 ['Búsqueda de trabajadores',context.query],
+                 ['Filtro de trabajadores',context.filter],
+                 ['Trabajadores',people.length],
+                 ['Registros',items.length],
+-                ['Nota','El alcance filtrado aplica a la vista de trabajadores e incluye todas sus filas TR5/TR6. Las tablas de registros tienen filtros independientes.']
++                ['Nota','Los filtros del cruce seleccionan trabajadores; se exportan todas sus filas TR5/TR6 sin eliminar columnas. La búsqueda de registros originales es independiente y no afecta este Excel.']
+             ] },
+             { name: 'Trabajadores', rows: [
+                 ['Tipo documento','Número','Nombres registrados','TR5','TR6','Multiplicidad','Presencia','Diferencias de identidad'],
+                 ...people.map(p => {
+@@ -214,18 +214,68 @@
+     reset() {
+         this.analysis = null; this.page = 0; this.selected.clear(); this.filtered = []; this.current = null; this.activeQuickFilter = 'all';
+         document.getElementById('tr-person-search').value = '';
+         document.getElementById('tr-person-filter').value = 'all';
++        for (const [id, value] of [['tr-worker-field','all'],['tr-worker-type',''],['tr-worker-occupation','']]) {
++            const element = document.getElementById(id);
++            if (element) { element.replaceChildren(); element.value = value; }
++        }
++        const status = document.getElementById('tr-cross-filter-summary');
++        if (status) status.textContent = 'Seleccione un reporte para consultar trabajadores.';
++        const filteredButton = document.getElementById('tr-export-current-filter');
++        if (filteredButton) filteredButton.disabled = true;
+         TRFilterUI.reset(); TRExport.invalidate();
+         document.getElementById('tr-diagnostic-preview').replaceChildren();
+         document.getElementById('tr-people').classList.add('hidden');
+         document.getElementById('tr-person-detail').replaceChildren();
+     },
+     set(analysis) {
+         this.analysis = analysis; this.page = 0; this.activeQuickFilter = 'all';
+         TRFilterUI.set(analysis);
++        this.configureWorkerFilters(analysis);
+         document.getElementById('tr-people').classList.remove('hidden');
+         this.updateQuickFindings();
++        this.render();
++    },
++    configureWorkerFilters(analysis) {
++        const fill = (id, options, defaultValue) => {
++            const select = document.getElementById(id);
++            if (!select) return;
++            select.replaceChildren(...options.map(({value, label}) => {
++                const option = document.createElement('option');
++                option.value = value;
++                option.textContent = label;
++                return option;
++            }));
++            select.value = defaultValue;
++        };
++        fill('tr-worker-field', TRFilters.searchableFields(analysis), 'all');
++        fill('tr-worker-type', [{value:'',label:'Todos los tipos'},
++            ...TRFilters.documentTypes(analysis).map(value => ({value,label:value}))], '');
++        const occupations = TRFilters.occupations(analysis);
++        fill('tr-worker-occupation', [{value:'',label:occupations.length ? 'Todas las ocupaciones' : 'Sin ocupación en los reportes'},
++            ...occupations.map(value => ({value,label:value}))], '');
++        const occupationFilter = document.getElementById('tr-worker-occupation');
++        if (occupationFilter) occupationFilter.disabled = !occupations.length;
++    },
++    hasActiveWorkerFilters() {
++        const read = id => document.getElementById(id)?.value || '';
++        return Boolean(read('tr-person-search').trim() || read('tr-worker-type') || read('tr-worker-occupation')
++            || read('tr-person-filter') !== 'all' || this.activeQuickFilter !== 'all'
++            || TRFilterUI.rules.length);
++    },
++    clearWorkerFilters() {
++        if (!this.analysis) return;
++        for (const [id, value] of [['tr-person-search',''], ['tr-worker-field','all'],
++            ['tr-worker-type',''], ['tr-worker-occupation',''], ['tr-person-filter','all']]) {
++            const element = document.getElementById(id);
++            if (element) element.value = value;
++        }
++        this.activeQuickFilter = 'all';
++        TRFilterUI.rules = [];
++        TRFilterUI.draw();
++        TRExport.invalidate();
++        this.page = 0;
+         this.render();
+     },
+     updateQuickFindings() {
+         if (!this.analysis) return;
+@@ -258,16 +308,19 @@
+     },
+     render() {
+         if (!this.analysis) return;
+         const el = id => document.getElementById(id);
+-        const query = TRAnalysis.key(el('tr-person-search').value);
++        const query = el('tr-person-search').value;
++        const field = el('tr-worker-field').value;
++        const documentType = el('tr-worker-type').value;
++        const occupation = el('tr-worker-occupation').value;
+         // Los accesos rápidos complementan al selector de estado, sin duplicarlo.
+         const filter = this.activeQuickFilter !== 'all' ? this.activeQuickFilter : el('tr-person-filter').value;
+         this.updateQuickFindings();
+ 
+         const people = this.analysis.people.filter(p => {
+             if (!TRFilters.matches(p, TRFilterUI.rules, TRAnalysis.date)) return false;
+-            if (query && !TRAnalysis.key([p.type, p.number, ...p.names].join(' ')).includes(query)) return false;
++            if (!TRFilters.matchesWorker(p,{query,field,documentType,occupation})) return false;
+             if (filter === 'all') return true;
+             if (filter === 'selected') return this.selected.has(p.id);
+             if (filter === 'differences') return p.identityDifference;
+             if (filter === 'multiple') return p.hasMultipleTR5 || (p.TR6.length > 1);
+@@ -276,8 +329,16 @@
+             return p.status === filter;
+         });
+ 
+         this.filtered = people;
++        const hasFilter = this.hasActiveWorkerFilters();
++        const originalMatches = people.reduce((count, person) => count + person.TR5.length + person.TR6.length, 0);
++        const summary = el('tr-cross-filter-summary');
++        if (summary) summary.textContent = hasFilter
++            ? `${people.length} de ${this.analysis.people.length} trabajadores encontrados · ${originalMatches} registros TR5/TR6 asociados. El Excel filtrado conservará todas sus filas.`
++            : `${this.analysis.people.length} trabajadores disponibles. Combine apellido, tipo documental, ocupación y otros campos para filtrar.`;
++        const exportButton = el('tr-export-current-filter');
++        if (exportButton) exportButton.disabled = !hasFilter || !people.length;
+         el('tr-selection-count').textContent = `${this.selected.size} trabajadores seleccionados (todas sus filas TR5/TR6)`;
+         this.page = Math.max(0, Math.min(this.page, Math.ceil(people.length / 50) - 1));
+         el('tr-person-summary').textContent = `${this.analysis.people.length} identidades · ${people.length} visibles · ${this.analysis.datasets.reduce((n,d) => n + d.records.length, 0)} registros originales · ${this.analysis.paired ? 'Cruce validado por RUC' : 'Un reporte'}`;
+         
+@@ -591,16 +652,27 @@
+     }
+ };
+ 
+ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', () => {
+-    ['tr-person-search', 'tr-person-filter'].forEach(id => {
++    ['tr-person-search', 'tr-person-filter', 'tr-worker-field', 'tr-worker-type', 'tr-worker-occupation'].forEach(id => {
+         const el = document.getElementById(id);
+-        if (el) el.addEventListener(id.endsWith('search') ? 'input' : 'change', () => {
++        if (el) el.addEventListener(id === 'tr-person-search' ? 'input' : 'change', () => {
+             if (id === 'tr-person-filter') TRView.activeQuickFilter = 'all';
+             TRExport.invalidate();
+             TRView.page = 0;
+             TRView.render();
+         });
++    });
++    document.getElementById('tr-cross-filter-clear')?.addEventListener('click', () => TRView.clearWorkerFilters());
++    document.getElementById('tr-export-current-filter')?.addEventListener('click', () => {
++        if (!TRView.analysis || !TRView.hasActiveWorkerFilters() || !TRView.filtered.length) return;
++        const scope = document.getElementById('tr-export-scope');
++        const details = document.getElementById('tr-export-details');
++        if (details) details.open = true;
++        TRExport.syncScopeOptions();
++        scope.value = 'filtered';
++        TRExport.preview();
++        document.getElementById('tr-export-center')?.scrollIntoView({block:'start',behavior:'smooth'});
+     });
+     const selFilt = document.getElementById('tr-select-filtered');
+     if (selFilt) selFilt.addEventListener('click', () => {
+         TRView.filtered.forEach(p => TRView.selected.add(p.id));
+--- a/tr-filters.js
++++ b/tr-filters.js
+@@ -1,6 +1,79 @@
+ const TRFilters = {
+     text(value) { return String(value ?? '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase(); },
++    // Normalización de comparación: texto, tildes y mayúsculas sin cambiar datos originales.
++    occupationColumns(dataset) {
++        if (!dataset?.columns) return [];
++        return dataset.columns.filter(column => {
++            const name = this.text(column.rawHeader || column.label).replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
++            return /^(OCUPACION|OFICIO|PUESTO|CARGO)(?: |$)/.test(name)
++                || /^(DENOMINACION DEL PUESTO|PUESTO DE TRABAJO)$/.test(name);
++        });
++    },
++    workerOccupations(person) {
++        const values = [];
++        for (const type of ['TR5', 'TR6']) {
++            for (const item of person[type] || []) {
++                for (const column of this.occupationColumns(item.dataset)) {
++                    const occupation = (item.record.rawCells[column.index] ?? '').trim();
++                    if (occupation) values.push(occupation);
++                }
++            }
++        }
++        return values;
++    },
++    documentTypes(analysis) {
++        const types = new Map();
++        for (const person of analysis.people) {
++            const value = String(person.type ?? '').trim();
++            if (value && !types.has(this.text(value))) types.set(this.text(value), value);
++        }
++        return [...types.values()].sort((a,b) => a.localeCompare(b,'es'));
++    },
++    occupations(analysis) {
++        const values = new Map();
++        for (const person of analysis.people) {
++            for (const value of this.workerOccupations(person)) {
++                if (!values.has(this.text(value))) values.set(this.text(value), value);
++            }
++        }
++        return [...values.values()].sort((a,b) => a.localeCompare(b,'es'));
++    },
++    searchableFields(analysis) {
++        const defaults = [
++            { value: 'all', label: 'Todos los campos' },
++            { value: 'surname', label: 'Apellido paterno o materno' },
++            { value: 'names', label: 'Nombres' },
++            { value: 'document', label: 'Tipo o número de documento' },
++            { value: 'occupation', label: 'Oficio u ocupación' }
++        ];
++        const extra = analysis.datasets.flatMap(dataset => dataset.columns.map(column => ({
++            value: `raw:${dataset.type}:${column.index}`,
++            label: `${dataset.type} · ${column.label}`
++        })));
++        return [...defaults, ...extra];
++    },
++    matchesWorker(person, { query = '', field = 'all', documentType = '', occupation = '' } = {}) {
++        if (documentType && this.text(person.type) !== this.text(documentType)) return false;
++        if (occupation && !this.workerOccupations(person).some(value => this.text(value) === this.text(occupation))) return false;
++        const wanted = this.text(query);
++        if (!wanted) return true;
++        const allItems = [...(person.TR5 || []), ...(person.TR6 || [])];
++        let values = [];
++        if (field === 'surname') values = allItems.flatMap(item => (item.names || []).slice(0,2));
++        else if (field === 'names') values = allItems.map(item => item.names?.[2] ?? '');
++        else if (field === 'document') values = [person.type, person.number];
++        else if (field === 'occupation') values = this.workerOccupations(person);
++        else if (/^raw:TR[56]:\d+$/.test(field)) {
++            const [, type, indexText] = /^raw:(TR[56]):(\d+)$/.exec(field);
++            const index = Number(indexText);
++            values = (person[type] || []).map(item => item.record.rawCells[index]).filter(v => v !== undefined);
++        } else if (field === 'all') {
++            values = [person.type, person.number, ...(person.names || []),
++                ...allItems.flatMap(item => item.record.rawCells)];
++        } else return false;
++        return values.some(value => this.text(value).includes(wanted));
++    },
+     matches(person, rules, parseDate) {
+         return ['TR5', 'TR6'].every(type => {
+             const conditions = rules.filter(r => r.type === type);
+             if (!conditions.length) return true;
+--- a/tr-export.js
++++ b/tr-export.js
+@@ -9,8 +9,10 @@
+         // Calcula el estado actual para mostrar/ocultar opciones del desplegable
+         const hasSearch = (document.getElementById('tr-person-search')?.value || '').trim() !== '';
+         const hasFilter = document.getElementById('tr-person-filter')?.value !== 'all' || TRView.activeQuickFilter !== 'all';
+         const hasAdvanced = TRFilterUI.rules.length > 0;
++        const hasWorkerType = Boolean(document.getElementById('tr-worker-type')?.value);
++        const hasWorkerOccupation = Boolean(document.getElementById('tr-worker-occupation')?.value);
+         const hasSelected = TRView.selected && TRView.selected.size > 0;
+         const hasCurrent = !!TRView.current;
+ 
+         const setOption = (id, visible, labelSuffix = '') => {
+@@ -38,21 +40,21 @@
+         }
+         const filteredCount = TRView.filtered ? TRView.filtered.length : 0;
+         const selectedCount = TRView.selected ? TRView.selected.size : 0;
+ 
+-        setOption('tr-scope-filtered', hasSearch || hasFilter || hasAdvanced,
+-            filteredCount > 0 ? `${filteredCount} trabajadores` : null);
++        setOption('tr-scope-filtered', hasSearch || hasFilter || hasAdvanced || hasWorkerType || hasWorkerOccupation,
++            filteredCount > 0 ? `${filteredCount} ${filteredCount === 1 ? 'trabajador' : 'trabajadores'}` : null);
+         setOption('tr-scope-selected', hasSelected,
+-            selectedCount > 0 ? `${selectedCount} marcados` : null);
++            selectedCount > 0 ? `${selectedCount} ${selectedCount === 1 ? 'marcado' : 'marcados'}` : null);
+         setOption('tr-scope-individual', hasCurrent);
+ 
+         // Actualizar hint según opción seleccionada
+         const scope = document.getElementById('tr-export-scope');
+         const hint = document.getElementById('tr-export-hint');
+         if (scope && hint) {
+             const hints = {
+                 all: 'Se exportarán todos los trabajadores del reporte con sus filas completas de TR5 y TR6.',
+-                filtered: 'Se exportarán solo los trabajadores que coinciden con la búsqueda y filtros activos.',
++                filtered: 'Se exportarán únicamente los trabajadores que cumplen la búsqueda combinada, con todas sus filas TR5/TR6 y columnas originales.',
+                 selected: 'Se exportarán solo los trabajadores que tiene marcados con el checkbox.',
+                 individual: 'Se exportará únicamente el trabajador cuya ficha está abierta actualmente.'
+             };
+             hint.textContent = hints[scope.value] || hints.all;
+@@ -64,15 +66,26 @@
+         if (!TRView.analysis) return Utils.showToast('Primero cargue y visualice los reportes.', 'info');
+         const el = id=>document.getElementById(id), scope = el('tr-export-scope');
+         const people = TRAnalysis.scope(TRView.analysis,scope.value,TRView.selected,TRView.filtered,TRView.current);
+         if (!people.length) return Utils.showToast('El alcance elegido no contiene trabajadores. Seleccione trabajadores o abra una ficha.', 'info');
+-        const quickLabels = { multiple: 'Múltiples registros', no_cuspp: 'Sin CUSPP', no_sctr: 'Sin SCTR detectado' };
+-        const filterDescription = [quickLabels[TRView.activeQuickFilter] || el('tr-person-filter').selectedOptions[0].textContent,...TRFilterUI.descriptions()].join(' · ');
++        const quickLabels = { multiple: 'Múltiples registros', no_cuspp: 'CUSPP no registrado', no_sctr: 'SCTR salud no detectado' };
++        const enabledSelect = id => { const node = el(id); return node?.value ? node.selectedOptions[0]?.textContent : null; };
++        const criteria = [
++            TRView.activeQuickFilter !== 'all' ? quickLabels[TRView.activeQuickFilter] :
++                el('tr-person-filter').value !== 'all' ? el('tr-person-filter').selectedOptions[0].textContent : null,
++            el('tr-person-search').value.trim() ? `Campo: ${el('tr-worker-field').selectedOptions[0].textContent}` : null,
++            enabledSelect('tr-worker-type') ? `Tipo documento: ${enabledSelect('tr-worker-type')}` : null,
++            enabledSelect('tr-worker-occupation') ? `Oficio u ocupación: ${enabledSelect('tr-worker-occupation')}` : null,
++            ...TRFilterUI.descriptions()
++        ];
++        const filterDescription = criteria.filter(Boolean).join(' · ') || 'Sin filtros';
+         const sheets = TRAnalysis.sheets(TRView.analysis,people,{intendencia:AppState.intendencia,scope:scope.selectedOptions[0].textContent,query:el('tr-person-search').value,filter:filterDescription});
+         if (sheets.some(s=>s.rows.length>1048576 || s.rows.some(r=>r.length>16384 || r.some(v=>typeof v==='string' && v.length>32767)))) return Utils.showToast('El alcance supera los límites de Excel. Redúzcalo para evitar pérdida de datos.', 'info');
+         this.snapshot = {sheets,intendencia:AppState.intendencia,scopeCode:scope.value,metadata:{intendencia:AppState.intendencia,modulo:TRView.analysis.datasets.length===2?'TR5_TR6':TRView.analysis.datasets[0].type,registros:people.reduce((n,p)=>n+p.TR5.length+p.TR6.length,0),archivos:TRView.analysis.datasets.length}};
+-        el('tr-export-summary').textContent = `${scope.selectedOptions[0].textContent}: ${people.length} trabajadores · ${people.reduce((n,p)=>n+p.TR5.length+p.TR6.length,0)} registros. Se incluyen todas las columnas originales.`;
+-        el('tr-export-summary').textContent += ` Filtros de la vista: ${filterDescription}. Solo se aplican al alcance Trabajadores filtrados.`;
++        el('tr-export-summary').textContent = `${scope.selectedOptions[0].textContent}: ${people.length} ${people.length === 1 ? 'trabajador' : 'trabajadores'} · ${people.reduce((n,p)=>n+p.TR5.length+p.TR6.length,0)} registros. Se incluyen todas las columnas originales.`;
++        el('tr-export-summary').textContent += scope.value === 'filtered'
++            ? ` Criterios aplicados: ${filterDescription}. Se conservan todas las filas TR5/TR6 asociadas.`
++            : ` Exportación ${scope.value === 'all' ? 'completa sin recorte' : 'según alcance seleccionado'}. Filtros activos en pantalla: ${filterDescription}.`;
+         el('tr-export-sheets').replaceChildren(...sheets.map(s=>{ const li=document.createElement('li'); li.textContent=`${s.name}: ${s.rows.length-1} filas · ${s.rows[0].length} columnas`; return li; }));
+         const table = el('tr-export-sample'); table.replaceChildren();
+         sheets[1].rows.slice(0,6).forEach((values,index)=>{const row=document.createElement('tr');values.forEach(value=>{const cell=document.createElement(index?'td':'th');cell.textContent=value;row.appendChild(cell);});table.appendChild(row);});
+         el('tr-export-preview').classList.remove('hidden'); el('tr-export-download').disabled=false;
+--- a/LEEME_CAMBIOS.md
++++ b/LEEME_CAMBIOS.md
+@@ -1,4 +1,67 @@
++# TR5-V2 — Proyecto completo actualizado v3.2: filtros dentro del cruce TR5/TR6
++
++**Esta versión incluye todo el código fuente.** Es continuación de la entrega v3.1. Se integraron los filtros de columna, tipo de documento y oficio/ocupación directamente en el **paso 3: Trabajadores y Cruce Inspectivo TR5/TR6**. Ya no aparecen en el paso 2 de registros originales.
++
++## Cómo usar los filtros y descargar el Excel
++
++1. Seleccione intendencia, cargue un TXT TR5 o un par TR5 + TR6 del mismo RUC y pulse **Visualizar datos**.
++2. En el **paso 3 (Cruce Inspectivo)** escriba un apellido, nombre, documento u oficio en **Buscar trabajador**. En **Columna de búsqueda** puede elegir *Todos los campos*, *Apellido paterno o materno*, *Nombres*, *Tipo o número de documento*, *Oficio u ocupación*, o una columna original específica del TR5/TR6.
++3. Combine la búsqueda con **Tipo de documento**, **Oficio u ocupación** y opcionalmente **Presencia o condición**. Los valores se extraen de los reportes cargados. Los filtros adicionales avanzados por columnas siguen disponibles.
++4. Revise cuántos **trabajadores** y **filas TR5/TR6 asociadas** coinciden. Pulse **Exportar resultados filtrados** para abrir automáticamente el paso 4, previsualizando el alcance filtrado, o seleccione manualmente *Resultados del filtro aplicado* en el centro de exportación.
++5. Descargue el Excel. Incluye todas las filas originales correspondientes a cada trabajador encontrado (aunque haya varias ocupaciones o múltiples filas) y conserva columnas, valores, nombres de archivo y filas de procedencia.
++6. Para quitar solamente los criterios sin eliminar archivos procesados, pulse **Limpiar filtros del cruce**. Para terminar la sesión utilice **Finalizar consulta y limpiar todo**, que pide confirmación. Descargar Excel no reinicia el sistema.
++
++**Importante:** la búsqueda del **paso 2 (Registros originales)** es solo para consultar filas. La exportación por trabajadores depende de los filtros del **paso 3**, no de la búsqueda del paso 2. Los datos originales se conservan en memoria hasta que termine la consulta y no se editan los TXT.
++
++## Archivos modificados en v3.2
++
++- `index.html`: trasladar controles al cruce, mostrar estado de búsqueda y acceso directo a la exportación filtrada.
++- `tr-filters.js`: criterios combinados por persona, apellidos, nombres, tipo documental, oficio/ocupación y columnas originales TR5/TR6.
++- `tr-analysis.js`: poblar opciones dinámicas, aplicar los criterios, restablecerlos sin borrar selecciones y conservar resultados asociados.
++- `tr-export.js`: reconocer nuevos filtros, documentar criterios en el XLSX y previsualizar el alcance correcto.
++- `script.js`: retirar los antiguos filtros redundantes de la vista de registros originales y conservar su búsqueda independiente.
++- `tests/tr-cruce-filtros-integracion.test.cjs`: casos sintéticos y reales, con cruces, fechas y trazabilidad.
++
++## Validación de v3.2
++
++- `node --test`: **26 pruebas aprobadas** en Node.js 22.
++- Sintaxis de los JavaScript y unicidad de los IDs de HTML verificadas.
++- Flujo de UI comprobado en Chromium con el HTML y scripts insertados localmente en una página de pruebas, por restricciones de navegación del entorno. Se comprobó la selección combinada y se descargó un XLSX válido de seis hojas. **No sustituye la comprobación manual al desplegar en un servidor normal.**
++- Muestras: **6 filas TR5 + 121 filas TR6** presentes, y selección combinada de un trabajador con 2 filas TR5 + 1 fila TR6 conservadas.
++
++## Instalación desde cero en Windows
++
++1. Descomprima este ZIP. Abra la carpeta `TR5V2_Proyecto_Revisado` en Visual Studio Code.
++2. Abra una terminal en esa carpeta, ejecute `node --test` y confirme que las 26 pruebas pasan.
++3. Ejecute `py -m http.server 8000` y visite `http://localhost:8000` en Chrome/Edge. Requiere Internet para algunas dependencias externas del diseño y gráficos.
++4. Para publicar en GitHub sin sobreescribir directamente `main`, clone el repositorio y cree una rama, copie el contenido corregido sin reemplazar `.git`, confirme `node --test`, haga commit y abra Pull Request.
++
++```powershell
++git clone https://github.com/kjimenezarone-netizen/tr5-v2.git
++cd tr5-v2
++git switch -c feat/filtros-cruce-tr-v3-2
++# Copie aquí los archivos de esta carpeta sin reemplazar .git
++node --test
++git diff --check
++git add -A
++git commit -m "feat: integrar filtros de oficio y documento en cruce TR"
++git push -u origin feat/filtros-cruce-tr-v3-2
++```
++
++**GitHub no se modificó automáticamente:** la conexión remota no concedió permisos de escritura. El ZIP incluye el código listo para revisión y publicación.
++
++## Documentación
++
++`DOCUMENTACION_CAMBIOS.xml`: documento actualizado de v3.2 (cambios e instrucciones).  
++`DOCUMENTACION_CAMBIOS_V3_1.xml`: documentación histórica previa.  
++`CAMBIOS_FILTROS_CRUCE_V3_2.patch`: diff entre v3.1 y v3.2.  
++`CAMBIOS_APLICADOS_V3_1.patch`: diff histórico original de v3.1.
++
++---
++
++## Historial anterior — v3.1
++
+ # TR5-V2 — Proyecto revisado y corregido (v3.1)
+ 
+ Este paquete contiene el **código completo** extraído del RAR proporcionado por el usuario, con las mejoras implementadas en TR5/TR6 y RUC Masivo. No es un aplicador ni requiere descargar otro kit.
+ 
+--- a/tests/tr-cruce-filtros-integracion.test.cjs
++++ b/tests/tr-cruce-filtros-integracion.test.cjs
+@@ -0,0 +1,111 @@
++const test = require('node:test');
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const path = require('node:path');
++const parser = require('../file-parser.js');
++const tr = require('../tr-analysis.js');
++const filters = require('../tr-filters.js');
++
++const sameRuc = 'NRO DE RUC: 20123456789';
++const tr5 = parser.parse([
++  'TR5: reporte', sameRuc,
++  'Tipo|Número|Apellido paterno|Apellido materno|Nombres|Ocupación|Centro',
++  '01|000123|García|Pérez|María|Operario|Sede Norte',
++  '01|000123|García|Pérez|María|Supervisora|Sede Sur',
++  '04|000999|Guzmán|Rojas|Pedro|Operario|Sede Este',
++  '01|000456|López|Jiménez|Ana|Técnica|Sede Oeste'
++].join('\n'),'tr5.txt');
++const tr6 = parser.parse([
++  'TR6: reporte', sameRuc,
++  'Tipo|Número|Apellido paterno|Apellido materno|Nombres|Cargo|Plan',
++  '01|000123|García|Pérez|María|Auxiliar|SNP',
++  '04|000999|Guzmán|Rojas|Pedro|Operario|AFP'
++].join('\n'),'tr6.txt');
++const analysis = tr.build([tr5,tr6]);
++const maria = analysis.people.find(p=>p.number==='000123');
++const pedro = analysis.people.find(p=>p.number==='000999');
++
++const select = options => analysis.people.filter(person => filters.matchesWorker(person, options));
++
++test('Filtros del cruce: apellido sin tildes, tipo, ocupación y campo original combinados', () => {
++  assert.equal(analysis.people.length,3);
++  assert.deepEqual(select({query:'garcia',field:'surname'}),[maria]);
++  assert.deepEqual(select({query:'MARIA',field:'names',documentType:'01',occupation:'SUPERVISORA'}),[maria]);
++  assert.deepEqual(select({query:'000999',field:'document',occupation:'Operario'}),[pedro]);
++  assert.deepEqual(select({documentType:'04',occupation:'operario'}),[pedro]);
++  assert.deepEqual(select({query:'sede sur',field:'raw:TR5:6',documentType:'01',occupation:'operario'}),[maria]);
++  assert.deepEqual(select({query:'GARCIA',field:'surname',documentType:'04',occupation:'Operario'}),[]);
++  assert.deepEqual(select({query:'GARCIA',field:'names'}),[],'Apellidos no coinciden con nombres');
++  assert.deepEqual(select({occupation:'AUXILIAR'}),[maria],'La ocupación de TR6 también puede usarse');
++  assert.equal(filters.matchesWorker(maria,{query:'GARCIA',field:'raw:TR5:3'}),false,'No se debe cruzar una columna distinta');
++});
++
++test('Valores de los selectores: tipos y ocupaciones reales, sin listas codificadas', () => {
++  const docs = filters.documentTypes(analysis);
++  assert.deepEqual(docs,['01','04']);
++  assert.deepEqual(filters.occupations(analysis),['Auxiliar','Operario','Supervisora','Técnica']);
++  const fields = filters.searchableFields(analysis);
++  assert.ok(fields.some(x=>x.value==='raw:TR5:5' && x.label.includes('Ocupación')));
++  assert.ok(fields.some(x=>x.value==='raw:TR6:5' && x.label.includes('Cargo')));
++  assert.equal(filters.occupations(tr.build([parser.parse('TR5: reporte\nTipo|Número|Apellido paterno|Nombres\n01|1|A|B','sin-ocupacion')])).length,0);
++});
++
++test('Excel del cruce filtrado conserva todas las filas y columnas originales del trabajador', () => {
++  const originals = [tr5,tr6].map(d=>d.records.map(r=>r.rawLine));
++  const filtered = select({query:'garcia',field:'surname',documentType:'01',occupation:'Supervisora'});
++  const selected = tr.scope(analysis,'filtered',new Set(),filtered,null);
++  assert.equal(selected.length,1);
++  const sheets = tr.sheets(analysis,selected,{intendencia:'TEST',scope:'Resultados filtrados',query:'garcia',filter:'DNI · Supervisora'});
++  const tr5Original = sheets.find(s=>s.name==='TR5 Original');
++  const tr6Original = sheets.find(s=>s.name==='TR6 Original');
++  assert.equal(tr5Original.rows.length,3,'Se conservan ambas filas TR5 de María');
++  assert.equal(tr6Original.rows.length,2,'Se conserva su fila TR6');
++  assert.equal(tr5Original.rows[0].length,7);
++  assert.equal(tr6Original.rows[0].length,7);
++  assert.equal(tr5Original.rows[1][1],'000123','Ceros iniciales intactos');
++  assert.equal(tr5Original.rows[1][5],'Operario','Se conserva la fila de otra ocupación de la misma persona');
++  assert.equal(tr5Original.rows[2][5],'Supervisora');
++  assert.equal(sheets.find(s=>s.name==='Fuentes').rows.length,4,'Trazabilidad de todas las filas');
++  assert.deepEqual([tr5,tr6].map(d=>d.records.map(r=>r.rawLine)),originals,'No modificar fuentes');
++  assert.equal(analysis.people.length,3,'No eliminar trabajadores del análisis original');
++});
++
++test('Filtros de interfaz ubicados dentro del cruce, sin duplicarse en originales', () => {
++  const html = fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
++  const originalStart = html.indexOf('<!-- PASO 2: Registros originales -->');
++  const crossStart = html.indexOf('<!-- PASO 3: Trabajadores -->');
++  const exportStart = html.indexOf('<!-- PASO 4: Centro de exportación -->');
++  assert.ok(originalStart>=0 && crossStart>originalStart && exportStart>crossStart);
++  for (const id of ['tr-worker-field','tr-worker-type','tr-worker-occupation','tr-person-search','tr-export-current-filter','tr-cross-filter-clear']) {
++    const mark=`id="${id}"`;
++    assert.equal(html.split(mark).length-1,1,`${id} debe aparecer una vez`);
++    assert.ok(html.indexOf(mark)>crossStart && html.indexOf(mark)<exportStart, `${id} debe estar en Cruce Inspectivo`);
++  }
++  for (const legacy of ['filter_tipo','filter_ocupacion','filter_columna']) {
++    assert.equal(html.includes(`id="${legacy}"`),false, `${legacy} no debe mantenerse como filtro de registros originales`);
++  }
++  assert.ok(html.includes('id="tr-scope-filtered"'));
++  const js = fs.readFileSync(path.join(__dirname,'../tr-export.js'),'utf8');
++  assert.ok(js.includes("hasWorkerOccupation") && js.includes("hasWorkerType"));
++  assert.ok(js.includes('TRAnalysis.sheets('));
++});
++
++test('Muestras aportadas: filtro combinado por apellido, DNI y oficio conserva la multiplicidad', () => {
++  const base=path.join(__dirname,'../muestras');
++  const real5=parser.parse(parser.decode(fs.readFileSync(path.join(base,'muestra_TR5_ACELIM.txt'))).text,'muestra_TR5');
++  const real6=parser.parse(parser.decode(fs.readFileSync(path.join(base,'muestra_TR6_ACELIM.txt'))).text,'muestra_TR6');
++  const real=tr.build([real5,real6]);
++  assert.ok(filters.occupations(real).includes('PEON AGRICOLA'));
++  assert.ok(filters.documentTypes(real).includes('L.E / DNI'));
++  const workers=real.people.filter(p=>filters.matchesWorker(p,{
++    query:'ALAMA',field:'surname',documentType:'L.E / DNI',occupation:'PEON AGRICOLA'
++  }));
++  assert.equal(workers.length,1);
++  assert.equal(workers[0].TR5.length,2);
++  assert.equal(workers[0].TR6.length,1);
++  const pages=tr.sheets(real,workers,{intendencia:'PRUEBA',scope:'filtrado',query:'ALAMA',filter:'PEON AGRICOLA'});
++  assert.equal(pages.find(s=>s.name==='TR5 Original').rows.length,3);
++  assert.equal(pages.find(s=>s.name==='TR6 Original').rows.length,2);
++  assert.equal(real5.records.length,6);
++  assert.equal(real6.records.length,121);
++});
