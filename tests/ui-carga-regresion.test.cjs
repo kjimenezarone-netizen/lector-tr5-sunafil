@@ -48,9 +48,9 @@ test('TR: limpiar selección no borra tablas, fichas, reportes ni archivos en me
 test('RUC: solo se limpia input si hubo fuentes válidas, sin tocar modelo', () => {
     const src = read('ruc.js');
     const start = src.indexOf('            if (model.sources.length > 0) {');
-    const end = src.indexOf('\n            }\n', start);
+    const end = src.indexOf('\n        } catch (error)', start);
     assert.ok(start >= 0 && end > start, 'Existe rama de carga exitosa');
-    const fragment = src.slice(start, end + '\n            }'.length);
+    const fragment = src.slice(start, end);
     const file = element('consulta_2026.zip');
     const model = {sources: []};
     const statuses = [];
