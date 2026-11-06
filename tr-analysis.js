@@ -20,7 +20,7 @@ const TRAnalysis = {
                 ['Filtro de trabajadores',context.filter],
                 ['Trabajadores',people.length],
                 ['Registros',items.length],
-                ['Nota','El alcance filtrado aplica a la vista de trabajadores e incluye todas sus filas TR5/TR6. Las tablas de registros tienen filtros independientes.']
+                ['Nota','Los filtros del cruce seleccionan trabajadores; se exportan todas sus filas TR5/TR6 sin eliminar columnas. La búsqueda de registros originales es independiente y no afecta este Excel.']
             ] },
             { name: 'Trabajadores', rows: [
                 ['Tipo documento','Número','Nombres registrados','TR5','TR6','Multiplicidad','Presencia','Diferencias de identidad'],
@@ -215,6 +215,14 @@ const TRView = {
         this.analysis = null; this.page = 0; this.selected.clear(); this.filtered = []; this.current = null; this.activeQuickFilter = 'all';
         document.getElementById('tr-person-search').value = '';
         document.getElementById('tr-person-filter').value = 'all';
+        for (const [id, value] of [['tr-worker-field','all'],['tr-worker-type',''],['tr-worker-occupation','']]) {
+            const element = document.getElementById(id);
+            if (element) { element.replaceChildren(); element.value = value; }
+        }
+        const status = document.getElementById('tr-cross-filter-summary');
+        if (status) status.textContent = 'Seleccione un reporte para consultar trabajadores.';
+        const filteredButton = document.getElementById('tr-export-current-filter');
+        if (filteredButton) filteredButton.disabled = true;
         TRFilterUI.reset(); TRExport.invalidate();
         document.getElementById('tr-diagnostic-preview').replaceChildren();
         document.getElementById('tr-people').classList.add('hidden');
@@ -223,8 +231,50 @@ const TRView = {
     set(analysis) {
         this.analysis = analysis; this.page = 0; this.activeQuickFilter = 'all';
         TRFilterUI.set(analysis);
+        this.configureWorkerFilters(analysis);
         document.getElementById('tr-people').classList.remove('hidden');
         this.updateQuickFindings();
+        this.render();
+    },
+    configureWorkerFilters(analysis) {
+        const fill = (id, options, defaultValue) => {
+            const select = document.getElementById(id);
+            if (!select) return;
+            select.replaceChildren(...options.map(({value, label}) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = label;
+                return option;
+            }));
+            select.value = defaultValue;
+        };
+        fill('tr-worker-field', TRFilters.searchableFields(analysis), 'all');
+        fill('tr-worker-type', [{value:'',label:'Todos los tipos'},
+            ...TRFilters.documentTypes(analysis).map(value => ({value,label:value}))], '');
+        const occupations = TRFilters.occupations(analysis);
+        fill('tr-worker-occupation', [{value:'',label:occupations.length ? 'Todas las ocupaciones' : 'Sin ocupación en los reportes'},
+            ...occupations.map(value => ({value,label:value}))], '');
+        const occupationFilter = document.getElementById('tr-worker-occupation');
+        if (occupationFilter) occupationFilter.disabled = !occupations.length;
+    },
+    hasActiveWorkerFilters() {
+        const read = id => document.getElementById(id)?.value || '';
+        return Boolean(read('tr-person-search').trim() || read('tr-worker-type') || read('tr-worker-occupation')
+            || read('tr-person-filter') !== 'all' || this.activeQuickFilter !== 'all'
+            || TRFilterUI.rules.length);
+    },
+    clearWorkerFilters() {
+        if (!this.analysis) return;
+        for (const [id, value] of [['tr-person-search',''], ['tr-worker-field','all'],
+            ['tr-worker-type',''], ['tr-worker-occupation',''], ['tr-person-filter','all']]) {
+            const element = document.getElementById(id);
+            if (element) element.value = value;
+        }
+        this.activeQuickFilter = 'all';
+        TRFilterUI.rules = [];
+        TRFilterUI.draw();
+        TRExport.invalidate();
+        this.page = 0;
         this.render();
     },
     updateQuickFindings() {
@@ -259,14 +309,17 @@ const TRView = {
     render() {
         if (!this.analysis) return;
         const el = id => document.getElementById(id);
-        const query = TRAnalysis.key(el('tr-person-search').value);
+        const query = el('tr-person-search').value;
+        const field = el('tr-worker-field').value;
+        const documentType = el('tr-worker-type').value;
+        const occupation = el('tr-worker-occupation').value;
         // Los accesos rápidos complementan al selector de estado, sin duplicarlo.
         const filter = this.activeQuickFilter !== 'all' ? this.activeQuickFilter : el('tr-person-filter').value;
         this.updateQuickFindings();
 
         const people = this.analysis.people.filter(p => {
             if (!TRFilters.matches(p, TRFilterUI.rules, TRAnalysis.date)) return false;
-            if (query && !TRAnalysis.key([p.type, p.number, ...p.names].join(' ')).includes(query)) return false;
+            if (!TRFilters.matchesWorker(p,{query,field,documentType,occupation})) return false;
             if (filter === 'all') return true;
             if (filter === 'selected') return this.selected.has(p.id);
             if (filter === 'differences') return p.identityDifference;
@@ -277,6 +330,14 @@ const TRView = {
         });
 
         this.filtered = people;
+        const hasFilter = this.hasActiveWorkerFilters();
+        const originalMatches = people.reduce((count, person) => count + person.TR5.length + person.TR6.length, 0);
+        const summary = el('tr-cross-filter-summary');
+        if (summary) summary.textContent = hasFilter
+            ? `${people.length} de ${this.analysis.people.length} trabajadores encontrados · ${originalMatches} registros TR5/TR6 asociados. El Excel filtrado conservará todas sus filas.`
+            : `${this.analysis.people.length} trabajadores disponibles. Combine apellido, tipo documental, ocupación y otros campos para filtrar.`;
+        const exportButton = el('tr-export-current-filter');
+        if (exportButton) exportButton.disabled = !hasFilter || !people.length;
         el('tr-selection-count').textContent = `${this.selected.size} trabajadores seleccionados (todas sus filas TR5/TR6)`;
         this.page = Math.max(0, Math.min(this.page, Math.ceil(people.length / 50) - 1));
         el('tr-person-summary').textContent = `${this.analysis.people.length} identidades · ${people.length} visibles · ${this.analysis.datasets.reduce((n,d) => n + d.records.length, 0)} registros originales · ${this.analysis.paired ? 'Cruce validado por RUC' : 'Un reporte'}`;
@@ -592,14 +653,25 @@ const TRView = {
 };
 
 if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', () => {
-    ['tr-person-search', 'tr-person-filter'].forEach(id => {
+    ['tr-person-search', 'tr-person-filter', 'tr-worker-field', 'tr-worker-type', 'tr-worker-occupation'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.addEventListener(id.endsWith('search') ? 'input' : 'change', () => {
+        if (el) el.addEventListener(id === 'tr-person-search' ? 'input' : 'change', () => {
             if (id === 'tr-person-filter') TRView.activeQuickFilter = 'all';
             TRExport.invalidate();
             TRView.page = 0;
             TRView.render();
         });
+    });
+    document.getElementById('tr-cross-filter-clear')?.addEventListener('click', () => TRView.clearWorkerFilters());
+    document.getElementById('tr-export-current-filter')?.addEventListener('click', () => {
+        if (!TRView.analysis || !TRView.hasActiveWorkerFilters() || !TRView.filtered.length) return;
+        const scope = document.getElementById('tr-export-scope');
+        const details = document.getElementById('tr-export-details');
+        if (details) details.open = true;
+        TRExport.syncScopeOptions();
+        scope.value = 'filtered';
+        TRExport.preview();
+        document.getElementById('tr-export-center')?.scrollIntoView({block:'start',behavior:'smooth'});
     });
     const selFilt = document.getElementById('tr-select-filtered');
     if (selFilt) selFilt.addEventListener('click', () => {

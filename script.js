@@ -211,10 +211,6 @@ const UI = {
             document.getElementById(id)?.replaceChildren();
         });
         document.getElementById('search_box').value = '';
-        ['filter_tipo', 'filter_ocupacion', 'filter_columna'].forEach(id => {
-            const select = document.getElementById(id);
-            if (select) select.replaceChildren(new Option('Sin filtro', ''));
-        });
         if (window.chartFileTipo) { window.chartFileTipo.destroy(); window.chartFileTipo = null; }
         if (window.chartFileOcup) { window.chartFileOcup.destroy(); window.chartFileOcup = null; }
         document.getElementById('tr-processing-status').textContent = 'Consulta finalizada. Puede cargar un nuevo reporte.';
@@ -316,19 +312,6 @@ const UI = {
             conteoOcup[o] = (conteoOcup[o] || 0) + 1;
         });
 
-        // 1. Rellenar Combobox de Filtros
-        const selectTipo = document.getElementById('filter_tipo');
-        if (selectTipo) {
-            selectTipo.innerHTML = '<option value="">-- Todos los Tipos --</option>' +
-                Object.keys(conteoTipos).sort().map(t => `<option value="${Utils.escapeHTML(t)}">${Utils.escapeHTML(t)}</option>`).join('');
-        }
-
-        const selectOcup = document.getElementById('filter_ocupacion');
-        if (selectOcup) {
-            selectOcup.innerHTML = '<option value="">-- Todas las Ocupaciones --</option>' +
-                Object.keys(conteoOcup).sort().map(o => `<option value="${Utils.escapeHTML(o)}">${Utils.escapeHTML(o)}</option>`).join('');
-        }
-
         // --- 2. Dibujar Gráficos Minilíticos ---
         const ctxTipo = document.getElementById('chart-file-tipo');
         if (window.chartFileTipo) window.chartFileTipo.destroy();
@@ -412,17 +395,6 @@ const Core = {
             UI.drawTable(AppState.globalRows, AppState.globalCols);
             UI.renderFileMetricsAndFilters(AppState.globalRows);
 
-            //el selector de búsqueda por columna
-            const selectCol = document.getElementById('filter_columna');
-            if (selectCol) {
-                selectCol.innerHTML = '<option value="">🔍 Todas las columnas</option>' +
-                    AppState.globalCols
-                        .filter(c => c !== 'N°')
-                        .map(c => `<option value="${Utils.escapeHTML(c)}">${Utils.escapeHTML(c)}</option>`)
-                        .join('');
-            }
-
-
             document.getElementById('preview_section').classList.remove('hidden');
             // Actualizar tarjetas de archivo con datos reales del dataset procesado
             const fileCards = document.getElementById('file-cards');
@@ -483,8 +455,6 @@ const Core = {
         AppState.sourceDataset = dataset; AppState.globalRows = rows; AppState.globalCols = cols;
         UI.renderInfoBox(Core.extractCompanyInfo(dataset.text.split(/\r\n|\n|\r/), dataset));
         document.getElementById('search_box').value = '';
-        const select = document.getElementById('filter_columna');
-        select.replaceChildren(...['', ...cols].map(c => { const option = document.createElement('option'); option.value = c; option.textContent = c || 'Todas las columnas'; return option; }));
         UI.drawTable(rows, cols); UI.renderFileMetricsAndFilters(rows);
     },
 
@@ -537,24 +507,11 @@ const Core = {
         clearTimeout(AppState.searchDebounceTimeout);
         AppState.searchDebounceTimeout = setTimeout(() => {
             const query = document.getElementById('search_box').value.toLowerCase().trim();
-            const filterTipo = document.getElementById('filter_tipo')?.value || "";
-            const filterOcup = document.getElementById('filter_ocupacion')?.value || "";
-            const filterCol = document.getElementById('filter_columna')?.value || "";
-
             AppState.currentFilteredRows = AppState.globalRows.filter(row => {
                 let match = true;
 
-                // Dropdowns de tipo y ocupación
-                if (filterTipo && row["Tipo Doc."] !== filterTipo) match = false;
-                if (filterOcup && row["Ocupación"] !== filterOcup) match = false;
-
-                // Búsqueda de texto: en columna específica o en todas
-                if (match && query) {
-                    if (filterCol) {
-                        match = String(row[filterCol] || '').toLowerCase().includes(query);
-                    } else {
-                        match = Object.values(row).some(val => String(val).toLowerCase().includes(query));
-                    }
+                if (query) {
+                    match = Object.values(row).some(value => String(value ?? '').toLowerCase().includes(query));
                 }
 
                 return match;
@@ -1035,9 +992,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn_process_data')?.addEventListener('click', () => Core.processData());
     ['tr-reset-all', 'tr-reset-all-bottom'].forEach(id => document.getElementById(id)?.addEventListener('click', () => UI.resetWorkspaceTR()));
     document.getElementById('search_box')?.addEventListener('input', Core.runFilter);
-    document.getElementById('filter_columna')?.addEventListener('change', Core.runFilter);
-    document.getElementById('filter_tipo')?.addEventListener('change', Core.runFilter);
-    document.getElementById('filter_ocupacion')?.addEventListener('change', Core.runFilter);
 
     // Modo Oscuro — toggle + persistencia
     const btnDark = document.getElementById('btn-dark-mode');

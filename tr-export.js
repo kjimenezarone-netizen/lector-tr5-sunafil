@@ -10,6 +10,8 @@ const TRExport = {
         const hasSearch = (document.getElementById('tr-person-search')?.value || '').trim() !== '';
         const hasFilter = document.getElementById('tr-person-filter')?.value !== 'all' || TRView.activeQuickFilter !== 'all';
         const hasAdvanced = TRFilterUI.rules.length > 0;
+        const hasWorkerType = Boolean(document.getElementById('tr-worker-type')?.value);
+        const hasWorkerOccupation = Boolean(document.getElementById('tr-worker-occupation')?.value);
         const hasSelected = TRView.selected && TRView.selected.size > 0;
         const hasCurrent = !!TRView.current;
 
@@ -39,10 +41,10 @@ const TRExport = {
         const filteredCount = TRView.filtered ? TRView.filtered.length : 0;
         const selectedCount = TRView.selected ? TRView.selected.size : 0;
 
-        setOption('tr-scope-filtered', hasSearch || hasFilter || hasAdvanced,
-            filteredCount > 0 ? `${filteredCount} trabajadores` : null);
+        setOption('tr-scope-filtered', hasSearch || hasFilter || hasAdvanced || hasWorkerType || hasWorkerOccupation,
+            filteredCount > 0 ? `${filteredCount} ${filteredCount === 1 ? 'trabajador' : 'trabajadores'}` : null);
         setOption('tr-scope-selected', hasSelected,
-            selectedCount > 0 ? `${selectedCount} marcados` : null);
+            selectedCount > 0 ? `${selectedCount} ${selectedCount === 1 ? 'marcado' : 'marcados'}` : null);
         setOption('tr-scope-individual', hasCurrent);
 
         // Actualizar hint según opción seleccionada
@@ -51,7 +53,7 @@ const TRExport = {
         if (scope && hint) {
             const hints = {
                 all: 'Se exportarán todos los trabajadores del reporte con sus filas completas de TR5 y TR6.',
-                filtered: 'Se exportarán solo los trabajadores que coinciden con la búsqueda y filtros activos.',
+                filtered: 'Se exportarán únicamente los trabajadores que cumplen la búsqueda combinada, con todas sus filas TR5/TR6 y columnas originales.',
                 selected: 'Se exportarán solo los trabajadores que tiene marcados con el checkbox.',
                 individual: 'Se exportará únicamente el trabajador cuya ficha está abierta actualmente.'
             };
@@ -65,13 +67,24 @@ const TRExport = {
         const el = id=>document.getElementById(id), scope = el('tr-export-scope');
         const people = TRAnalysis.scope(TRView.analysis,scope.value,TRView.selected,TRView.filtered,TRView.current);
         if (!people.length) return Utils.showToast('El alcance elegido no contiene trabajadores. Seleccione trabajadores o abra una ficha.', 'info');
-        const quickLabels = { multiple: 'Múltiples registros', no_cuspp: 'Sin CUSPP', no_sctr: 'Sin SCTR detectado' };
-        const filterDescription = [quickLabels[TRView.activeQuickFilter] || el('tr-person-filter').selectedOptions[0].textContent,...TRFilterUI.descriptions()].join(' · ');
+        const quickLabels = { multiple: 'Múltiples registros', no_cuspp: 'CUSPP no registrado', no_sctr: 'SCTR salud no detectado' };
+        const enabledSelect = id => { const node = el(id); return node?.value ? node.selectedOptions[0]?.textContent : null; };
+        const criteria = [
+            TRView.activeQuickFilter !== 'all' ? quickLabels[TRView.activeQuickFilter] :
+                el('tr-person-filter').value !== 'all' ? el('tr-person-filter').selectedOptions[0].textContent : null,
+            el('tr-person-search').value.trim() ? `Campo: ${el('tr-worker-field').selectedOptions[0].textContent}` : null,
+            enabledSelect('tr-worker-type') ? `Tipo documento: ${enabledSelect('tr-worker-type')}` : null,
+            enabledSelect('tr-worker-occupation') ? `Oficio u ocupación: ${enabledSelect('tr-worker-occupation')}` : null,
+            ...TRFilterUI.descriptions()
+        ];
+        const filterDescription = criteria.filter(Boolean).join(' · ') || 'Sin filtros';
         const sheets = TRAnalysis.sheets(TRView.analysis,people,{intendencia:AppState.intendencia,scope:scope.selectedOptions[0].textContent,query:el('tr-person-search').value,filter:filterDescription});
         if (sheets.some(s=>s.rows.length>1048576 || s.rows.some(r=>r.length>16384 || r.some(v=>typeof v==='string' && v.length>32767)))) return Utils.showToast('El alcance supera los límites de Excel. Redúzcalo para evitar pérdida de datos.', 'info');
         this.snapshot = {sheets,intendencia:AppState.intendencia,scopeCode:scope.value,metadata:{intendencia:AppState.intendencia,modulo:TRView.analysis.datasets.length===2?'TR5_TR6':TRView.analysis.datasets[0].type,registros:people.reduce((n,p)=>n+p.TR5.length+p.TR6.length,0),archivos:TRView.analysis.datasets.length}};
-        el('tr-export-summary').textContent = `${scope.selectedOptions[0].textContent}: ${people.length} trabajadores · ${people.reduce((n,p)=>n+p.TR5.length+p.TR6.length,0)} registros. Se incluyen todas las columnas originales.`;
-        el('tr-export-summary').textContent += ` Filtros de la vista: ${filterDescription}. Solo se aplican al alcance Trabajadores filtrados.`;
+        el('tr-export-summary').textContent = `${scope.selectedOptions[0].textContent}: ${people.length} ${people.length === 1 ? 'trabajador' : 'trabajadores'} · ${people.reduce((n,p)=>n+p.TR5.length+p.TR6.length,0)} registros. Se incluyen todas las columnas originales.`;
+        el('tr-export-summary').textContent += scope.value === 'filtered'
+            ? ` Criterios aplicados: ${filterDescription}. Se conservan todas las filas TR5/TR6 asociadas.`
+            : ` Exportación ${scope.value === 'all' ? 'completa sin recorte' : 'según alcance seleccionado'}. Filtros activos en pantalla: ${filterDescription}.`;
         el('tr-export-sheets').replaceChildren(...sheets.map(s=>{ const li=document.createElement('li'); li.textContent=`${s.name}: ${s.rows.length-1} filas · ${s.rows[0].length} columnas`; return li; }));
         const table = el('tr-export-sample'); table.replaceChildren();
         sheets[1].rows.slice(0,6).forEach((values,index)=>{const row=document.createElement('tr');values.forEach(value=>{const cell=document.createElement(index?'td':'th');cell.textContent=value;row.appendChild(cell);});table.appendChild(row);});

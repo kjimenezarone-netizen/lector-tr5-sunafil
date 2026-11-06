@@ -1,3 +1,66 @@
+# TR5-V2 — Proyecto completo actualizado v3.2: filtros dentro del cruce TR5/TR6
+
+**Esta versión incluye todo el código fuente.** Es continuación de la entrega v3.1. Se integraron los filtros de columna, tipo de documento y oficio/ocupación directamente en el **paso 3: Trabajadores y Cruce Inspectivo TR5/TR6**. Ya no aparecen en el paso 2 de registros originales.
+
+## Cómo usar los filtros y descargar el Excel
+
+1. Seleccione intendencia, cargue un TXT TR5 o un par TR5 + TR6 del mismo RUC y pulse **Visualizar datos**.
+2. En el **paso 3 (Cruce Inspectivo)** escriba un apellido, nombre, documento u oficio en **Buscar trabajador**. En **Columna de búsqueda** puede elegir *Todos los campos*, *Apellido paterno o materno*, *Nombres*, *Tipo o número de documento*, *Oficio u ocupación*, o una columna original específica del TR5/TR6.
+3. Combine la búsqueda con **Tipo de documento**, **Oficio u ocupación** y opcionalmente **Presencia o condición**. Los valores se extraen de los reportes cargados. Los filtros adicionales avanzados por columnas siguen disponibles.
+4. Revise cuántos **trabajadores** y **filas TR5/TR6 asociadas** coinciden. Pulse **Exportar resultados filtrados** para abrir automáticamente el paso 4, previsualizando el alcance filtrado, o seleccione manualmente *Resultados del filtro aplicado* en el centro de exportación.
+5. Descargue el Excel. Incluye todas las filas originales correspondientes a cada trabajador encontrado (aunque haya varias ocupaciones o múltiples filas) y conserva columnas, valores, nombres de archivo y filas de procedencia.
+6. Para quitar solamente los criterios sin eliminar archivos procesados, pulse **Limpiar filtros del cruce**. Para terminar la sesión utilice **Finalizar consulta y limpiar todo**, que pide confirmación. Descargar Excel no reinicia el sistema.
+
+**Importante:** la búsqueda del **paso 2 (Registros originales)** es solo para consultar filas. La exportación por trabajadores depende de los filtros del **paso 3**, no de la búsqueda del paso 2. Los datos originales se conservan en memoria hasta que termine la consulta y no se editan los TXT.
+
+## Archivos modificados en v3.2
+
+- `index.html`: trasladar controles al cruce, mostrar estado de búsqueda y acceso directo a la exportación filtrada.
+- `tr-filters.js`: criterios combinados por persona, apellidos, nombres, tipo documental, oficio/ocupación y columnas originales TR5/TR6.
+- `tr-analysis.js`: poblar opciones dinámicas, aplicar los criterios, restablecerlos sin borrar selecciones y conservar resultados asociados.
+- `tr-export.js`: reconocer nuevos filtros, documentar criterios en el XLSX y previsualizar el alcance correcto.
+- `script.js`: retirar los antiguos filtros redundantes de la vista de registros originales y conservar su búsqueda independiente.
+- `tests/tr-cruce-filtros-integracion.test.cjs`: casos sintéticos y reales, con cruces, fechas y trazabilidad.
+
+## Validación de v3.2
+
+- `node --test`: **26 pruebas aprobadas** en Node.js 22.
+- Sintaxis de los JavaScript y unicidad de los IDs de HTML verificadas.
+- Flujo de UI comprobado en Chromium con el HTML y scripts insertados localmente en una página de pruebas, por restricciones de navegación del entorno. Se comprobó la selección combinada y se descargó un XLSX válido de seis hojas. **No sustituye la comprobación manual al desplegar en un servidor normal.**
+- Muestras: **6 filas TR5 + 121 filas TR6** presentes, y selección combinada de un trabajador con 2 filas TR5 + 1 fila TR6 conservadas.
+
+## Instalación desde cero en Windows
+
+1. Descomprima este ZIP. Abra la carpeta `TR5V2_Proyecto_Revisado` en Visual Studio Code.
+2. Abra una terminal en esa carpeta, ejecute `node --test` y confirme que las 26 pruebas pasan.
+3. Ejecute `py -m http.server 8000` y visite `http://localhost:8000` en Chrome/Edge. Requiere Internet para algunas dependencias externas del diseño y gráficos.
+4. Para publicar en GitHub sin sobreescribir directamente `main`, clone el repositorio y cree una rama, copie el contenido corregido sin reemplazar `.git`, confirme `node --test`, haga commit y abra Pull Request.
+
+```powershell
+git clone https://github.com/kjimenezarone-netizen/tr5-v2.git
+cd tr5-v2
+git switch -c feat/filtros-cruce-tr-v3-2
+# Copie aquí los archivos de esta carpeta sin reemplazar .git
+node --test
+git diff --check
+git add -A
+git commit -m "feat: integrar filtros de oficio y documento en cruce TR"
+git push -u origin feat/filtros-cruce-tr-v3-2
+```
+
+**GitHub no se modificó automáticamente:** la conexión remota no concedió permisos de escritura. El ZIP incluye el código listo para revisión y publicación.
+
+## Documentación
+
+`DOCUMENTACION_CAMBIOS.xml`: documento actualizado de v3.2 (cambios e instrucciones).
+`DOCUMENTACION_CAMBIOS_V3_1.xml`: documentación histórica previa.
+`CAMBIOS_FILTROS_CRUCE_V3_2.patch`: diff entre v3.1 y v3.2.
+`CAMBIOS_APLICADOS_V3_1.patch`: diff histórico original de v3.1.
+
+---
+
+## Historial anterior — v3.1
+
 # TR5-V2 — Proyecto revisado y corregido (v3.1)
 
 Este paquete contiene el **código completo** extraído del RAR proporcionado por el usuario, con las mejoras implementadas en TR5/TR6 y RUC Masivo. No es un aplicador ni requiere descargar otro kit.
