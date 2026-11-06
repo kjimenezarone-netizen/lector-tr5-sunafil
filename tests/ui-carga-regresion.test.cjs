@@ -64,26 +64,30 @@ test('RUC: solo se limpia input si hubo fuentes válidas, sin tocar modelo', () 
     assert.equal(model.sources.length, 1, 'Las fuentes procesadas continúan en memoria');
 });
 
-test('RUC: el selector de ZIP solo se ve en alcance Por ZIP', () => {
-    const src = read('ruc.js');
-    const start = src.indexOf('    function syncZipScope() {');
-    const end = src.indexOf("    el('ruc-export-scope').addEventListener", start);
+test('RUC: flujo simplificado de tres pasos y descarga directa sin previsualización', () => {
+    const html = read('index.html');
+    const js = read('ruc.js');
+    const start = html.indexOf('<main id="page-ruc"');
+    const end = html.indexOf('<main id="page-procesador"');
     assert.ok(start >= 0 && end > start);
-    const elements = {
-        'ruc-export-scope': {...element('all')},
-        'ruc-export-zip-wrap': element(),
-        'ruc-export-zip': element()
-    };
-    elements['ruc-export-zip'].options = [element('0')];
-    const el = id => elements[id];
-    const sync = new Function('el', src.slice(start,end) + '\nreturn syncZipScope;')(el);
-    sync();
-    assert.equal(elements['ruc-export-zip-wrap'].classList.contains('hidden'), true);
-    assert.equal(elements['ruc-export-zip'].disabled, true);
-    elements['ruc-export-scope'].value = 'zip';
-    sync();
-    assert.equal(elements['ruc-export-zip-wrap'].classList.contains('hidden'), false);
-    assert.equal(elements['ruc-export-zip'].disabled, false);
+    const ruc = html.slice(start, end);
+    for (const legacy of [
+        'ruc-diagnostic-prepare', 'ruc-diagnostic-preview', 'ruc-select-filtered',
+        'ruc-clear-selection', 'ruc-selection-count', 'ruc-column-control',
+        'ruc-column-options', 'ruc-export-scope', 'ruc-export-zip',
+        'ruc-export-preview', 'ruc-preview-button', 'ruc-detail-export'
+    ]) {
+        assert.ok(!ruc.includes(`id="${legacy}"`), `${legacy} no debe aparecer en RUC`);
+        assert.ok(!js.includes(`el('${legacy}')`), `${legacy} no debe tener manejadores activos`);
+    }
+    assert.match(ruc, /id="ruc-export-hint"/);
+    assert.match(ruc, /id="ruc-download"/);
+    assert.match(ruc, /Descargar Excel/);
+    assert.match(js, /RucModel\.exportForView\(model, filtered, query, mode\)/);
+    const select = ruc.slice(ruc.indexOf('<select id="ruc-filter"'),ruc.indexOf('</select>',ruc.indexOf('<select id="ruc-filter"')));
+    assert.match(select, /value="all"/);
+    assert.match(select, /value="repeated"/);
+    assert.doesNotMatch(select, /value="selected"|value="differences"/);
 });
 
 test('TR: tarjetas rápidas sin opciones duplicadas; exportar respeta su selección', () => {
@@ -95,5 +99,5 @@ test('TR: tarjetas rápidas sin opciones duplicadas; exportar respeta su selecci
     }
     assert.match(read('tr-export.js'), /TRView\.activeQuickFilter !== 'all'/);
     assert.match(read('tr-analysis.js'), /TRExport\.invalidate\(\);\s*TRView\.page = 0;\s*TRView\.render\(\);/);
-    assert.match(html, /id="ruc-export-zip-wrap" class="min-w-\[180px\] hidden"/);
+    assert.match(html, /id="ruc-download"/);
 });

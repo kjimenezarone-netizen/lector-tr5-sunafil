@@ -96,12 +96,13 @@ test('Limpiar selección TR no borra datasets; limpiar todo requiere confirmaci�
   assert.ok(invalidate > 0);
 });
 
-test('Limpieza RUC separada de selección, exportaciones y fuentes', () => {
+test('Limpieza RUC explícita y descarga sin controles de selección', () => {
   const js = read('ruc.js');
   assert.match(js, /ruc-reset-all.*addEventListener\('click'/);
   assert.ok(js.includes('model = RucModel.consolidate([]);'));
   assert.ok(js.includes('el(\'ruc-files\').value = \'\';'));
-  assert.ok(js.includes('ColumnChooser.reset(\'ruc-records\');'));
+  assert.ok(!js.includes('ColumnChooser.reset(\'ruc-records\');'));
+  assert.ok(js.includes("el('ruc-download').addEventListener('click'"));
   assert.ok(js.includes('window.confirm('));
   assert.ok(js.includes('el(\'ruc-files\').value = \'\'; // No elimina el modelo'));
 });

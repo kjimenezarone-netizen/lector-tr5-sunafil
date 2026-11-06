@@ -144,13 +144,6 @@
                     <p id="ruc-status" role="status" class="status-text">Seleccione archivos para comenzar.</p>
                 </div>
                 <ul id="ruc-issues" class="issues-list mt-2"></ul>
-                <details class="support-details mt-4">
-                    <summary>🔧 Diagnóstico técnico (soporte)</summary>
-                    <div class="mt-2">
-                        <button id="ruc-diagnostic-prepare" class="btn-ghost text-sm">Preparar diagnóstico</button>
-                        <div id="ruc-diagnostic-preview" class="mt-3" aria-live="polite"></div>
-                    </div>
-                </details>
             </div>
         </div>
 
@@ -194,32 +187,9 @@
                         <select id="ruc-filter" class="form-select">
                             <option value="all">Todos los registros</option>
                             <option value="repeated">RUC repetidos</option>
-                            <option value="differences">RUC con diferencias</option>
-                            <option value="selected">Selección de trabajo</option>
                         </select>
                     </div>
                 </div>
-                <div class="px-6 py-3 border-b flex flex-wrap gap-2 items-center">
-                    <button id="ruc-select-filtered" class="btn-ghost text-xs">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        Seleccionar empresas del resultado filtrado
-                    </button>
-                    <button id="ruc-clear-selection" class="btn-ghost text-xs">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                        Limpiar selección
-                    </button>
-                    <span id="ruc-selection-count" role="status" class="text-xs text-gray-500 ml-1"></span>
-                </div>
-                <details class="px-6 py-2 border-b text-xs text-gray-500">
-                    <summary class="cursor-pointer font-semibold">Ayuda sobre vistas y selección</summary>
-                    <p class="mt-2">Seleccionar una empresa incluye todas sus apariciones, incluso fuera del filtro. La selección persiste entre búsquedas y páginas; una nueva carga la reinicia.</p>
-                    <p class="mt-1">Empresas únicas muestra RUC de 11 dígitos. Las filas con RUC inválido permanecen en Registros.</p>
-                </details>
-                <details id="ruc-column-control" class="px-6 py-2 border-b border-t">
-                    <summary class="text-xs font-semibold text-gray-500 cursor-pointer py-1">Columnas visibles de registros RUC</summary>
-                    <p class="text-xs text-gray-400 mt-1">ZIP, TXT, fila, selección y acceso a ficha permanecen visibles.</p>
-                    <div id="ruc-column-options" class="column-options mt-2"></div>
-                </details>
                 <div class="overflow-auto max-h-[520px]">
                     <table class="ruc-table w-full text-left text-xs"><thead id="ruc-head"></thead><tbody id="ruc-body"></tbody></table>
                 </div>
@@ -236,57 +206,33 @@
                     <button id="ruc-detail-close" class="btn-ghost text-sm flex-shrink-0">✕ Cerrar ficha</button>
                 </div>
                 <p class="text-xs text-gray-500 mb-4">Los valores diferentes se muestran con sus fuentes; no se elige un valor principal automáticamente.</p>
-                <button id="ruc-detail-export" class="btn-secondary text-sm mb-5">Previsualizar Excel de esta empresa</button>
                 <div id="ruc-detail-content" class="overflow-auto"></div>
             </section>
         </div>
 
-        <!-- PASO 3: Exportar -->
+        <!-- PASO 3: Descargar Excel directamente -->
         <div class="step-section mt-5">
             <div class="step-header">
                 <span class="step-number">3</span>
                 <div>
-                    <h2 class="step-title">Exportar a Excel</h2>
-                    <p class="step-subtitle">Seleccione el alcance y previsualice antes de descargar.</p>
+                    <h2 class="step-title">Descargar Excel</h2>
+                    <p class="step-subtitle">Descargue todos los registros originales o los resultados filtrados de la sección 2, sin pasos adicionales.</p>
                 </div>
             </div>
             <div class="card-main p-6 bg-white">
-                <div class="flex flex-wrap gap-4 items-end">
-                    <div class="flex-1 min-w-[220px]">
-                        <label for="ruc-export-scope" class="form-label">Alcance</label>
-                        <select id="ruc-export-scope" class="form-select">
-                            <option value="consolidated">Consolidado de empresas + originales</option>
-                            <option value="company">Empresa de la última ficha abierta</option>
-                            <option value="all">Todos los registros originales</option>
-                            <option value="filtered">Resultado filtrado</option>
-                            <option value="selected">Empresas seleccionadas</option>
-                            <option value="repeated">RUC repetidos</option>
-                            <option value="differences">RUC con diferencias</option>
-                            <option value="zip">Por archivo de origen (ZIP o TXT)</option>
-                        </select>
-                    </div>
-                    <div id="ruc-export-zip-wrap" class="min-w-[180px] hidden">
-                        <label for="ruc-export-zip" class="form-label">Archivo de origen</label>
-                        <select id="ruc-export-zip" class="form-select"></select>
-                    </div>
-                    <button id="ruc-preview-button" disabled class="btn-primary py-2.5 px-5 text-white font-bold rounded-xl">Previsualizar exportación</button>
-                </div>
-                <p class="text-xs text-gray-500 mt-3">Solo «Resultado filtrado» utiliza la búsqueda actual. Las descargas mantienen los archivos originales y su trazabilidad.</p>
-                <div class="tr-finish-bar">
-                    <p>¿Terminó de revisar las empresas? Borre los resultados solo cuando usted lo decida.</p>
-                    <button type="button" id="ruc-reset-all" disabled class="btn-secondary tr-reset-action">Finalizar consulta y limpiar todo</button>
-                </div>
-                <div id="ruc-export-preview" class="hidden mt-5 pt-5 border-t" aria-live="polite">
-                    <p id="ruc-export-summary" class="font-bold text-sm mb-3 text-[#003366]"></p>
-                    <ul id="ruc-export-sheets" class="sheets-list mb-3"></ul>
-                    <p class="text-xs text-gray-500 mb-2">Muestra de los primeros 5 registros: ZIP, TXT, fila y valores originales.</p>
-                    <div class="overflow-auto max-h-[280px] border rounded-lg">
-                        <table id="ruc-export-sample" class="ruc-table text-xs w-full"></table>
-                    </div>
-                    <button id="ruc-download" disabled class="btn-excel mt-4 py-3 px-6 text-white font-bold rounded-xl flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                        Descargar Excel previsualizado
+                <div class="flex flex-wrap gap-4 items-center justify-between">
+                    <p id="ruc-export-hint" class="text-sm text-gray-600 flex-1 min-w-[220px]" role="status">
+                        Cargue archivos TXT o ZIP para habilitar la descarga.
+                    </p>
+                    <button type="button" id="ruc-download" disabled class="btn-excel py-2.5 px-6 text-white font-bold rounded-xl flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-4-4m4 4 4-4M5 17v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3"/></svg>
+                        Descargar Excel
                     </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-3">Se preservan las columnas, los valores y las filas originales, así como la trazabilidad de cada archivo.</p>
+                <div class="tr-finish-bar">
+                    <p>¿Terminó la consulta? Los resultados solo se borrarán cuando usted lo confirme.</p>
+                    <button type="button" id="ruc-reset-all" disabled class="btn-secondary tr-reset-action">Finalizar consulta y limpiar todo</button>
                 </div>
             </div>
         </div>
